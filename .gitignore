@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment variables (contain secrets)
+backend/.env
+.env
+
+# Databases
+backend/data/
+backend/prisma/data/
+
+# Fingerprint video library and cache
+backend/fingerprint/videos/
+backend/fingerprint/cache.json
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temp files
+*.tmp
+*.temp

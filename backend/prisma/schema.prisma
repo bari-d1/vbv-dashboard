@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model SyncLog {
+  platform     String    @id
+  lastSyncedAt DateTime
+  syncedFrom   DateTime?
+  syncedTo     DateTime?
+}
+
+model IgAccount {
+  id         Int      @id @default(1)
+  followers  Int      @default(0)
+  username   String   @default("")
+  views      Int      @default(0)
+  baseReach  Int      @default(0)
+  updatedAt  DateTime
+}
+
+model IgDailyMetric {
+  date     String   @id
+  reach    Int      @default(0)
+  syncedAt DateTime
+}
+
+model IgFollowerSnapshot {
+  date      String   @id
+  followers Int      @default(0)
+  syncedAt  DateTime
+}
+
+model Lead {
+  id              Int      @id @default(autoincrement())
+  displayName     String?
+  instagramHandle String?
+  eventName       String?
+  eventDate       String?
+  eventLocation   String?
+  contactEmail    String?
+  contactPhone    String?
+  collaborators   String   @default("[]")
+  status          String   @default("Not Contacted")
+  notes           String   @default("")
+  dateAdded       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model IgPost {
+  id             String   @id
+  mediaType      String   @default("")
+  thumbnail      String   @default("")
+  caption        String   @default("")
+  likes          Int      @default(0)
+  comments       Int      @default(0)
+  shares         Int      @default(0)
+  saves          Int      @default(0)
+  reach          Int      @default(0)
+  views          Int      @default(0)
+  impressions    Int      @default(0)
+  profileVisits  Int      @default(0)
+  follows        Int      @default(0)
+  engagementRate Float    @default(0)
+  avgWatchTime   Int      @default(0)
+  videoDuration  Float    @default(0)
+  postedAt       String   @default("")
+  syncedAt       DateTime
+}

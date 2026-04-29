@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verse by Verse · Analytics</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+</head>
+<body>
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Verse by Verse</div>
+      <div class="logo-sub">Analytics Dashboard</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Dashboards</div>
+
+      <div class="nav-item active" data-page="overview">
+        Overview
+      </div>
+
+      <div class="nav-section-label" style="margin-top:8px">Platforms</div>
+
+      <div class="nav-item" data-page="instagram">
+        Instagram
+        <span class="nav-badge">IG</span>
+      </div>
+
+      <div class="nav-item" data-page="tiktok">
+        TikTok
+        <span class="nav-badge">TT</span>
+      </div>
+
+      <div class="nav-item" data-page="youtube">
+        YouTube
+        <span class="nav-badge">YT</span>
+      </div>
+
+      <div class="nav-section-label" style="margin-top:8px">Tools</div>
+
+      <div class="nav-item" data-page="posts">
+        All Posts
+      </div>
+
+      <div class="nav-item" data-page="compare">
+        Compare Posts
+      </div>
+
+      <div class="nav-section-label" style="margin-top:8px">Tools</div>
+
+      <div class="nav-item" data-page="fingerprint">
+        Repost Detector
+      </div>
+
+      <div class="nav-item" data-page="leads">
+        Lead Generation
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="demo-dot"></div>
+      <span>Checking connection…</span>
+    </div>
+  </aside>
+
+  <!-- ── Main ────────────────────────────────────────────────────────────── -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div id="hamburger" class="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div>
+        <div class="topbar-title" id="topbar-title">Overview</div>
+        <div class="topbar-sub" id="topbar-sub">All platforms at a glance</div>
+      </div>
+
+      <div class="topbar-controls">
+        <div class="period-selector">
+          <button class="period-btn" data-period="7d">7d</button>
+          <button class="period-btn" data-period="30d">30d</button>
+          <button class="period-btn" data-period="90d">90d</button>
+          <button class="period-btn active" data-period="all">All</button>
+        </div>
+        <button class="refresh-btn" id="refresh-btn" title="Refresh data">↺</button>
+      </div>
+    </div>
+
+    <!-- Page content -->
+    <div class="page-content">
+
+      <!-- Overview page -->
+      <div class="page active" id="page-overview">
+        <div id="overview-content"></div>
+      </div>
+
+      <!-- Instagram page -->
+      <div class="page" id="page-instagram">
+        <div id="ig-content"></div>
+      </div>
+
+      <!-- TikTok page -->
+      <div class="page" id="page-tiktok">
+        <div id="tt-content"></div>
+      </div>
+
+      <!-- YouTube page -->
+      <div class="page" id="page-youtube">
+        <div id="yt-content"></div>
+      </div>
+
+      <!-- All Posts page -->
+      <div class="page" id="page-posts">
+        <div id="posts-content"></div>
+      </div>
+
+      <!-- Compare page -->
+      <div class="page" id="page-compare">
+        <div id="compare-content"></div>
+      </div>
+
+      <!-- Lead Generation page -->
+      <div class="page" id="page-leads">
+        <div id="leads-content"></div>
+      </div>
+
+      <!-- Fingerprint / Repost Detector page -->
+      <div class="page" id="page-fingerprint">
+        <div id="fingerprint-content"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/utils.js"></script>
+  <script src="/js/sync.js"></script>
+  <script src="/js/overview.js"></script>
+  <script src="/js/instagram.js"></script>
+  <script src="/js/tiktok.js"></script>
+  <script src="/js/youtube.js"></script>
+  <script src="/js/posts.js"></script>
+  <script src="/js/compare.js"></script>
+  <script src="/js/leads.js"></script>
+  <script src="/js/fingerprint.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
