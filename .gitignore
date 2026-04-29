@@ -10,9 +10,9 @@ backend/.env
 backend/data/
 backend/prisma/data/
 
-# Fingerprint video library and cache
+# Fingerprint video library (large files, not needed on server)
 backend/fingerprint/videos/
-backend/fingerprint/cache.json
+# cache.json is intentionally committed — it contains pre-computed hashes
 
 # macOS
 .DS_Store
