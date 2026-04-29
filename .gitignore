@@ -25,3 +25,6 @@ npm-debug.log*
 # Temp files
 *.tmp
 *.temp
+
+# Migration script (one-time use)
+backend/migrate-sqlite-to-postgres.js
