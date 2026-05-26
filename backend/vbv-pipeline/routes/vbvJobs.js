@@ -6,8 +6,8 @@ const { sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail } = r
 
 const ACTIVE_STATUSES = ['in_progress', 'submitted', 'sent_back_by_lead', 'lead_approved', 'sent_back_by_sm'];
 
-// POST /vbv/jobs — social_media or admin creates a job
-router.post('/', auth, role('social_media', 'admin'), async (req, res) => {
+// POST /vbv/jobs — social_media, lead_editor or admin creates a job
+router.post('/', auth, role('social_media', 'lead_editor', 'admin'), async (req, res) => {
   const { title, artistName, briefType, sourceDriveLink, startTimestamp, endTimestamp,
           clipNotes, editInstructions, platformTargets, deadline } = req.body;
 

@@ -17,6 +17,8 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'editor-dashboard', label: 'My Jobs' },
     ],
     lead_editor: [
+      { view: 'social-dashboard', label: 'Create Brief' },
+      { view: 'my-briefs', label: 'My Briefs' },
       { view: 'job-pool', label: 'Job Pool' },
       { view: 'editor-dashboard', label: 'My Jobs' },
       { view: 'lead-editor-dashboard', label: 'Review Queue' },
