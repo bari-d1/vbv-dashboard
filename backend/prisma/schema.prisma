@@ -71,3 +71,125 @@ model IgPost {
   postedAt       String   @default("")
   syncedAt       DateTime
 }
+
+// ── VBV Creative Pipeline ──────────────────────────────────────────────────
+
+model VbvUser {
+  id           String             @id @default(uuid())
+  name         String
+  email        String             @unique
+  passwordHash String
+  role         VbvRole
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  credential   VbvUserCredential?
+  createdJobs  VbvJob[]           @relation("CreatedBy")
+  assignedJobs VbvJob[]           @relation("AssignedTo")
+  submissions  VbvSubmission[]
+  smReviews    VbvSubmission[]    @relation("SmReviewer")
+  timelineLogs VbvTimelineLog[]
+  activityLogs VbvActivityLog[]
+}
+
+enum VbvRole {
+  social_media
+  editor
+  lead_editor
+  admin
+}
+
+model VbvUserCredential {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  email         String
+  plainPassword String
+  createdAt     DateTime @default(now())
+  user          VbvUser  @relation(fields: [userId], references: [id])
+}
+
+model VbvJob {
+  id               String          @id @default(uuid())
+  title            String
+  artistName       String
+  briefType        VbvBriefType
+  sourceDriveLink  String
+  startTimestamp   String?
+  endTimestamp     String?
+  clipNotes        String?
+  editInstructions String?
+  platformTargets  String[]
+  deadline         DateTime
+  status           VbvJobStatus    @default(open)
+  createdById      String
+  assignedToId     String?
+  claimedAt        DateTime?
+  createdAt        DateTime        @default(now())
+  createdBy        VbvUser         @relation("CreatedBy", fields: [createdById], references: [id])
+  assignedTo       VbvUser?        @relation("AssignedTo", fields: [assignedToId], references: [id])
+  submissions      VbvSubmission[]
+  timelineLogs     VbvTimelineLog[]
+}
+
+enum VbvBriefType {
+  timestamp_clip
+  full_edit
+}
+
+enum VbvJobStatus {
+  open
+  in_progress
+  submitted
+  sent_back_by_lead
+  lead_approved
+  sent_back_by_sm
+  sm_approved
+}
+
+model VbvSubmission {
+  id              String              @id @default(uuid())
+  jobId           String
+  editorId        String
+  driveLink       String
+  editorNotes     String?
+  submittedAt     DateTime            @default(now())
+  reviewNote      String?
+  reviewedAt      DateTime?
+  reviewAction    VbvReviewAction?
+  smReviewNote    String?
+  smReviewedAt    DateTime?
+  smReviewAction  VbvSmReviewAction?
+  smReviewedById  String?
+  job             VbvJob              @relation(fields: [jobId], references: [id])
+  editor          VbvUser             @relation(fields: [editorId], references: [id])
+  smReviewedBy    VbvUser?            @relation("SmReviewer", fields: [smReviewedById], references: [id])
+}
+
+enum VbvReviewAction {
+  lead_approved
+  sent_back_by_lead
+}
+
+enum VbvSmReviewAction {
+  sm_approved
+  sent_back_by_sm
+}
+
+model VbvTimelineLog {
+  id        String   @id @default(uuid())
+  jobId     String
+  actorId   String
+  action    String
+  note      String?
+  createdAt DateTime @default(now())
+  job       VbvJob   @relation(fields: [jobId], references: [id])
+  actor     VbvUser  @relation(fields: [actorId], references: [id])
+}
+
+model VbvActivityLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actionType String
+  detail     String?
+  createdAt  DateTime @default(now())
+  actor      VbvUser  @relation(fields: [actorId], references: [id])
+}

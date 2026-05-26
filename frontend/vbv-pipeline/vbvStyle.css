@@ -1,0 +1,193 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent: #e20415;
+  --accent-dark: #b50010;
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --border: #e0e0e0;
+  --text: #1a1a1a;
+  --text-muted: #6b7280;
+  --sidebar-bg: #111827;
+  --sidebar-text: #d1d5db;
+  --sidebar-active: #e20415;
+
+  --status-open: #9ca3af;
+  --status-open-bg: #f3f4f6;
+  --status-in-progress: #3b82f6;
+  --status-in-progress-bg: #eff6ff;
+  --status-submitted: #f59e0b;
+  --status-submitted-bg: #fffbeb;
+  --status-sent-back: #e20415;
+  --status-sent-back-bg: #fff1f2;
+  --status-approved: #10b981;
+  --status-approved-bg: #ecfdf5;
+  --status-lead-approved: #7c3aed;
+  --status-lead-approved-bg: #f5f3ff;
+  --status-sent-back-sm: #ea580c;
+  --status-sent-back-sm-bg: #fff7ed;
+  --status-sm-approved: #10b981;
+  --status-sm-approved-bg: #ecfdf5;
+}
+
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── Layout ── */
+#vbv-app { display: flex; min-height: 100vh; }
+
+.vbv-sidebar {
+  width: 220px; min-height: 100vh; background: var(--sidebar-bg); color: var(--sidebar-text);
+  display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.vbv-sidebar .vbv-logo {
+  padding: 24px 20px 16px; font-size: 1.1rem; font-weight: 700; color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.08); letter-spacing: -0.3px;
+}
+.vbv-sidebar .vbv-logo span { color: var(--accent); }
+.vbv-sidebar nav { flex: 1; padding: 12px 0; }
+.vbv-sidebar nav a {
+  display: block; padding: 10px 20px; color: var(--sidebar-text); text-decoration: none;
+  font-size: 0.9rem; border-left: 3px solid transparent; transition: background 0.15s, color 0.15s;
+}
+.vbv-sidebar nav a:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.vbv-sidebar nav a.active { border-left-color: var(--accent); background: rgba(226,4,21,0.12); color: #fff; }
+.vbv-sidebar .vbv-user-info {
+  padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.8rem; color: #9ca3af;
+}
+.vbv-sidebar .vbv-user-info strong { display: block; color: #fff; font-size: 0.85rem; margin-bottom: 2px; }
+.vbv-sidebar .vbv-logout { background: none; border: none; color: #e20415; cursor: pointer; font-size: 0.8rem; padding: 0; margin-top: 6px; }
+
+.vbv-main { flex: 1; padding: 32px; overflow-y: auto; }
+.vbv-main h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; }
+.vbv-main h2 { font-size: 1.15rem; font-weight: 600; margin-bottom: 16px; }
+
+/* ── Login ── */
+.vbv-login-wrap {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg);
+}
+.vbv-login-card {
+  background: var(--surface); border-radius: 12px; padding: 40px; width: 100%; max-width: 400px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+.vbv-login-card .vbv-logo-mark { font-size: 1.3rem; font-weight: 800; margin-bottom: 6px; }
+.vbv-login-card .vbv-logo-mark span { color: var(--accent); }
+.vbv-login-card p.sub { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 28px; }
+
+/* ── Forms ── */
+.vbv-form-group { margin-bottom: 18px; }
+.vbv-form-group label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.vbv-form-group input,
+.vbv-form-group select,
+.vbv-form-group textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 0.9rem; background: var(--surface); color: var(--text); outline: none;
+  transition: border-color 0.15s;
+}
+.vbv-form-group input:focus,
+.vbv-form-group select:focus,
+.vbv-form-group textarea:focus { border-color: var(--accent); }
+.vbv-form-group textarea { resize: vertical; min-height: 80px; }
+
+.vbv-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; }
+.vbv-checkboxes label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: normal; text-transform: none; letter-spacing: 0; color: var(--text); cursor: pointer; }
+.vbv-checkboxes input[type="checkbox"] { width: auto; }
+
+.vbv-brief-toggle { display: flex; gap: 0; margin-bottom: 24px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; width: fit-content; }
+.vbv-brief-toggle button {
+  padding: 9px 20px; background: var(--surface); border: none; cursor: pointer;
+  font-size: 0.88rem; font-weight: 500; color: var(--text-muted); transition: background 0.15s, color 0.15s;
+}
+.vbv-brief-toggle button.active { background: var(--accent); color: #fff; }
+
+/* ── Buttons ── */
+.vbv-btn {
+  display: inline-block; padding: 10px 20px; border-radius: 7px; font-size: 0.88rem; font-weight: 600;
+  cursor: pointer; border: none; transition: background 0.15s, opacity 0.15s; text-align: center;
+}
+.vbv-btn-primary { background: var(--accent); color: #fff; }
+.vbv-btn-primary:hover { background: var(--accent-dark); }
+.vbv-btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+.vbv-btn-secondary:hover { background: #e8e8e8; }
+.vbv-btn-success { background: #10b981; color: #fff; }
+.vbv-btn-success:hover { background: #059669; }
+.vbv-btn-danger { background: var(--accent); color: #fff; }
+.vbv-btn-danger:hover { background: var(--accent-dark); }
+.vbv-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.vbv-btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+
+/* ── Status badges ── */
+.vbv-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+}
+.vbv-badge-open { background: var(--status-open-bg); color: var(--status-open); }
+.vbv-badge-in_progress { background: var(--status-in-progress-bg); color: var(--status-in-progress); }
+.vbv-badge-submitted { background: var(--status-submitted-bg); color: var(--status-submitted); }
+.vbv-badge-sent_back_by_lead { background: var(--status-sent-back-bg); color: var(--status-sent-back); }
+.vbv-badge-lead_approved { background: var(--status-lead-approved-bg); color: var(--status-lead-approved); }
+.vbv-badge-sent_back_by_sm { background: var(--status-sent-back-sm-bg); color: var(--status-sent-back-sm); }
+.vbv-badge-sm_approved { background: var(--status-sm-approved-bg); color: var(--status-sm-approved); }
+.vbv-badge-timestamp_clip { background: #ede9fe; color: #7c3aed; }
+.vbv-badge-full_edit { background: #fce7f3; color: #be185d; }
+
+/* ── Cards ── */
+.vbv-card { background: var(--surface); border-radius: 10px; padding: 20px; border: 1px solid var(--border); margin-bottom: 14px; }
+.vbv-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.vbv-card-title { font-size: 1rem; font-weight: 600; }
+.vbv-card-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+.vbv-card-details { font-size: 0.85rem; color: var(--text-muted); margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; display: none; }
+.vbv-card-details.open { display: block; }
+.vbv-card-details p { margin-bottom: 6px; }
+.vbv-card-details strong { color: var(--text); }
+.vbv-card-actions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ── Tables ── */
+.vbv-table-wrap { overflow-x: auto; }
+.vbv-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.vbv-table th { background: var(--bg); text-align: left; padding: 10px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.vbv-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.vbv-table tr:last-child td { border-bottom: none; }
+.vbv-table tr:hover td { background: #fafafa; }
+
+/* ── Timeline ── */
+.vbv-timeline { list-style: none; position: relative; padding-left: 20px; }
+.vbv-timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.vbv-timeline li { position: relative; margin-bottom: 18px; }
+.vbv-timeline li::before { content: ''; position: absolute; left: -18px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); }
+.vbv-timeline .tl-action { font-weight: 600; font-size: 0.88rem; }
+.vbv-timeline .tl-note { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+.vbv-timeline .tl-time { font-size: 0.75rem; color: #9ca3af; margin-top: 2px; }
+
+/* ── Alert boxes ── */
+.vbv-alert { padding: 12px 16px; border-radius: 8px; font-size: 0.88rem; margin-bottom: 16px; }
+.vbv-alert-warning { background: var(--status-sent-back-bg); border: 1px solid #fca5a5; color: #991b1b; }
+.vbv-alert-info { background: var(--status-in-progress-bg); border: 1px solid #93c5fd; color: #1d4ed8; }
+.vbv-alert-error { background: var(--status-sent-back-bg); color: var(--accent); border: 1px solid #fca5a5; }
+
+/* ── Password field ── */
+.vbv-pw-wrap { position: relative; }
+.vbv-pw-wrap input { padding-right: 40px; }
+.vbv-pw-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 0.8rem; color: var(--text-muted); }
+
+/* ── Modals / inline forms ── */
+.vbv-inline-form { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 10px; }
+
+/* ── Grid ── */
+.vbv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+
+/* ── Section header ── */
+.vbv-section { margin-bottom: 40px; }
+.vbv-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+
+/* ── Loading / empty ── */
+.vbv-empty { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 0.9rem; }
+.vbv-loading { text-align: center; padding: 32px; color: var(--text-muted); }
+
+/* ── Assign row ── */
+.vbv-assign-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.vbv-assign-row select { flex: 1; min-width: 160px; }
+
+@media (max-width: 768px) {
+  .vbv-sidebar { width: 64px; }
+  .vbv-sidebar .vbv-logo, .vbv-sidebar nav a span, .vbv-sidebar .vbv-user-info { display: none; }
+  .vbv-main { padding: 16px; }
+}

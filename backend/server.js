@@ -11,6 +11,13 @@ const postsRoutes = require('./routes/posts');
 const fingerprintRoutes = require('./routes/fingerprint');
 const leadsRoutes = require('./routes/leads');
 
+// VBV Pipeline routes
+const vbvAuthRoutes = require('./vbv-pipeline/routes/vbvAuth');
+const vbvUsersRoutes = require('./vbv-pipeline/routes/vbvUsers');
+const vbvJobsRoutes = require('./vbv-pipeline/routes/vbvJobs');
+const vbvSubmissionsRoutes = require('./vbv-pipeline/routes/vbvSubmissions');
+const vbvLogsRoutes = require('./vbv-pipeline/routes/vbvLogs');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -28,6 +35,13 @@ app.use('/api/sync', syncRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/fingerprint', fingerprintRoutes);
 app.use('/api/leads', leadsRoutes);
+
+// VBV Pipeline
+app.use('/vbv/auth', vbvAuthRoutes);
+app.use('/vbv/users', vbvUsersRoutes);
+app.use('/vbv/jobs', vbvJobsRoutes);
+app.use('/vbv/submissions', vbvSubmissionsRoutes);
+app.use('/vbv/logs', vbvLogsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
