@@ -4,6 +4,7 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'admin-panel', label: 'User Management' },
       { view: 'activity-log', label: 'Activity Log' },
       { view: 'social-dashboard', label: 'Create Brief' },
+      { view: 'my-briefs', label: 'My Briefs' },
       { view: 'for-review', label: 'For Review' },
       { view: 'lead-editor-dashboard', label: 'Assign & Review' },
     ],
