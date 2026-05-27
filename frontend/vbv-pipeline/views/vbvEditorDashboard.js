@@ -12,7 +12,12 @@ async function vbvRenderEditorDashboard() {
 
     // Status-specific alerts
     let statusAlert = '';
-    if (job.status === 'sent_back_by_lead' && latestSub?.reviewNote) {
+    if (job.status === 'assigned') {
+      statusAlert = `
+        <div class="vbv-alert vbv-alert-info" style="margin-top:10px;">
+          You have been assigned this job. Accept it to start working.
+        </div>`;
+    } else if (job.status === 'sent_back_by_lead' && latestSub?.reviewNote) {
       statusAlert = `
         <div class="vbv-alert vbv-alert-warning" style="margin-top:10px;">
           <strong>Sent back by Lead Editor:</strong> ${escapeHtml(latestSub.reviewNote)}
@@ -34,6 +39,10 @@ async function vbvRenderEditorDashboard() {
         </div>`;
     }
 
+    const acceptBtn = job.status === 'assigned' ? `
+      <button class="vbv-btn vbv-btn-primary vbv-btn-sm vbv-accept-btn" data-job-id="${job.id}" style="margin-top:10px;">Accept Job</button>
+      <span class="vbv-accept-err" id="acc-err-${job.id}" style="color:var(--accent);font-size:0.8rem;margin-left:10px;display:none;"></span>` : '';
+
     const canSubmit = ['in_progress', 'sent_back_by_lead', 'sent_back_by_sm'].includes(job.status);
     const submitForm = canSubmit ? `
       <div class="vbv-inline-form" id="submit-form-${job.id}">
@@ -51,6 +60,7 @@ async function vbvRenderEditorDashboard() {
 
     const extra = `
       ${statusAlert}
+      ${acceptBtn}
       <div style="margin-top:14px;">
         <strong style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-muted);">Timeline</strong>
         <div style="margin-top:8px;">${timeline}</div>
@@ -64,6 +74,21 @@ async function vbvRenderEditorDashboard() {
 }
 
 function vbvBindEditorDashboard() {
+  document.querySelectorAll('.vbv-accept-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const jobId = btn.dataset.jobId;
+      const errEl = document.getElementById(`acc-err-${jobId}`);
+      btn.disabled = true; btn.textContent = 'Accepting…';
+      try {
+        await vbvApi('POST', `/vbv/jobs/${jobId}/accept`);
+        vbvNavigate('editor-dashboard');
+      } catch(err) {
+        errEl.textContent = err.message; errEl.style.display = 'inline';
+        btn.disabled = false; btn.textContent = 'Accept Job';
+      }
+    });
+  });
+
   document.querySelectorAll('.vbv-submit-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const jobId = btn.dataset.jobId;

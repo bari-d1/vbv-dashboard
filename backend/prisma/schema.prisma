@@ -137,6 +137,7 @@ enum VbvBriefType {
 
 enum VbvJobStatus {
   open
+  assigned
   in_progress
   submitted
   sent_back_by_lead

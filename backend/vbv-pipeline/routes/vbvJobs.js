@@ -4,7 +4,7 @@ const auth = require('../middleware/vbvAuthMiddleware');
 const role = require('../middleware/vbvRoleMiddleware');
 const { sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail } = require('../services/vbvEmailService');
 
-const ACTIVE_STATUSES = ['in_progress', 'submitted', 'sent_back_by_lead', 'lead_approved', 'sent_back_by_sm'];
+const ACTIVE_STATUSES = ['assigned', 'in_progress', 'submitted', 'sent_back_by_lead', 'lead_approved', 'sent_back_by_sm'];
 
 // POST /vbv/jobs — social_media, lead_editor or admin creates a job
 router.post('/', auth, role('social_media', 'lead_editor', 'admin'), async (req, res) => {
@@ -163,7 +163,7 @@ router.post('/:id/assign', auth, role('lead_editor', 'admin'), async (req, res) 
 
   const updated = await prisma.vbvJob.update({
     where: { id: req.params.id },
-    data: { assignedToId: editorId, status: 'in_progress', claimedAt: new Date() },
+    data: { assignedToId: editorId, status: 'assigned', claimedAt: new Date() },
   });
 
   await prisma.vbvTimelineLog.create({
@@ -173,6 +173,26 @@ router.post('/:id/assign', auth, role('lead_editor', 'admin'), async (req, res) 
     data: { actorId: req.vbvUser.userId, actionType: 'job_assigned', detail: `Assigned job: ${updated.title}` },
   });
 
+  res.json(updated);
+});
+
+// POST /vbv/jobs/:id/accept — editor accepts an assigned job → in_progress
+router.post('/:id/accept', auth, role('editor', 'lead_editor'), async (req, res) => {
+  const job = await prisma.vbvJob.findUnique({ where: { id: req.params.id } });
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  if (job.assignedToId !== req.vbvUser.userId) return res.status(403).json({ error: 'This job is not assigned to you' });
+  if (job.status !== 'assigned') return res.status(400).json({ error: 'Job is not pending acceptance' });
+
+  const updated = await prisma.vbvJob.update({
+    where: { id: req.params.id },
+    data: { status: 'in_progress' },
+  });
+  await prisma.vbvTimelineLog.create({
+    data: { jobId: updated.id, actorId: req.vbvUser.userId, action: 'accepted' },
+  });
+  await prisma.vbvActivityLog.create({
+    data: { actorId: req.vbvUser.userId, actionType: 'job_accepted', detail: `Accepted job: ${updated.title}` },
+  });
   res.json(updated);
 });
 
