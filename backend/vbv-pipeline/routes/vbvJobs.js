@@ -38,8 +38,8 @@ router.post('/', auth, role('social_media', 'lead_editor', 'admin'), async (req,
   res.status(201).json(job);
 });
 
-// GET /vbv/jobs/mine — social_media or admin's own created jobs
-router.get('/mine', auth, role('social_media', 'admin'), async (req, res) => {
+// GET /vbv/jobs/mine — social_media, lead_editor or admin's own created jobs
+router.get('/mine', auth, role('social_media', 'lead_editor', 'admin'), async (req, res) => {
   const jobs = await prisma.vbvJob.findMany({
     where: { createdById: req.vbvUser.userId },
     include: { assignedTo: { select: { name: true } } },

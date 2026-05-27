@@ -8,6 +8,7 @@ async function vbvApi(method, path, body) {
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(path, opts);
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) { vbvLogout(); return; }
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
 }
