@@ -37,8 +37,17 @@ async function vbvNavigate(view) {
   const user = vbvCurrentUser();
   if (!user) { vbvShowLogin(); return; }
 
-  // Build shell with sidebar + main content area
-  app.innerHTML = vbvRenderSidebar(user, view) + '<main class="vbv-main" id="vbv-main"><div class="vbv-loading">Loading…</div></main>';
+  // Build shell with mobile header, sidebar drawer, overlay, and main content
+  app.innerHTML =
+    `<div class="vbv-mobile-header">
+      <button class="vbv-hamburger" id="vbv-hamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+      <span class="vbv-mobile-title">VBV <em>Pipeline</em></span>
+    </div>
+    <div class="vbv-sidebar-overlay" id="vbv-sidebar-overlay"></div>` +
+    vbvRenderSidebar(user, view) +
+    '<main class="vbv-main" id="vbv-main"><div class="vbv-loading">Loading…</div></main>';
   vbvSidebarBindEvents();
 
   const main = document.getElementById('vbv-main');

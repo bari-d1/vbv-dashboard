@@ -46,6 +46,7 @@ function vbvRenderSidebar(user, activeView) {
 
   return `
     <aside class="vbv-sidebar">
+      <button class="vbv-sidebar-close" id="vbv-sidebar-close" aria-label="Close menu">&times;</button>
       <div class="vbv-logo">VBV <span>Pipeline</span></div>
       <nav>${links}</nav>
       <div class="vbv-user-info">
@@ -58,12 +59,32 @@ function vbvRenderSidebar(user, activeView) {
 }
 
 function vbvSidebarBindEvents() {
+  const sidebar = document.querySelector('.vbv-sidebar');
+  const overlay = document.getElementById('vbv-sidebar-overlay');
+
+  function openSidebar() {
+    sidebar?.classList.add('vbv-sidebar-open');
+    overlay?.classList.add('vbv-overlay-open');
+  }
+  function closeSidebar() {
+    sidebar?.classList.remove('vbv-sidebar-open');
+    overlay?.classList.remove('vbv-overlay-open');
+  }
+
   document.querySelectorAll('.vbv-sidebar nav a').forEach(a => {
     a.addEventListener('click', e => {
       e.preventDefault();
+      closeSidebar();
       vbvNavigate(a.dataset.view);
     });
   });
+
   const logoutBtn = document.getElementById('vbv-logout-btn');
-  if (logoutBtn) logoutBtn.addEventListener('click', () => vbvLogout());
+  if (logoutBtn) logoutBtn.addEventListener('click', () => { closeSidebar(); vbvLogout(); });
+
+  const hamburger = document.getElementById('vbv-hamburger');
+  const closeBtn  = document.getElementById('vbv-sidebar-close');
+  if (hamburger) hamburger.addEventListener('click', openSidebar);
+  if (closeBtn)  closeBtn.addEventListener('click', closeSidebar);
+  if (overlay)   overlay.addEventListener('click', closeSidebar);
 }
