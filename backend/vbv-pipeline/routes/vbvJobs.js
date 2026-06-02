@@ -2,12 +2,12 @@ const router = require('express').Router();
 const prisma = require('../../db');
 const auth = require('../middleware/vbvAuthMiddleware');
 const role = require('../middleware/vbvRoleMiddleware');
-const { sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail } = require('../services/vbvEmailService');
+const { sendAssignmentEmail, sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail } = require('../services/vbvEmailService');
 
 const ACTIVE_STATUSES = ['assigned', 'in_progress', 'submitted', 'sent_back_by_lead', 'lead_approved', 'sent_back_by_sm'];
 
-// POST /vbv/jobs — social_media, lead_editor or admin creates a job
-router.post('/', auth, role('social_media', 'lead_editor', 'admin'), async (req, res) => {
+// POST /vbv/jobs — social_media, lead_editor, admin or vedits creates a job
+router.post('/', auth, role('social_media', 'lead_editor', 'admin', 'vedits'), async (req, res) => {
   const { title, artistName, briefType, sourceDriveLink, startTimestamp, endTimestamp,
           clipNotes, editInstructions, platformTargets, deadline } = req.body;
 
@@ -38,8 +38,24 @@ router.post('/', auth, role('social_media', 'lead_editor', 'admin'), async (req,
   res.status(201).json(job);
 });
 
-// GET /vbv/jobs/mine — social_media, lead_editor or admin's own created jobs
-router.get('/mine', auth, role('social_media', 'lead_editor', 'admin'), async (req, res) => {
+// GET /vbv/jobs/all — admin, lead_editor, vedits overview of active jobs
+router.get('/all', auth, role('lead_editor', 'admin', 'vedits'), async (req, res) => {
+  const where = { status: { not: 'sm_approved' } };
+  if (req.vbvUser.role === 'vedits') where.briefType = 'vedits';
+
+  const jobs = await prisma.vbvJob.findMany({
+    where,
+    include: {
+      createdBy: { select: { name: true } },
+      assignedTo: { select: { name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(jobs);
+});
+
+// GET /vbv/jobs/mine — own created jobs
+router.get('/mine', auth, role('social_media', 'lead_editor', 'admin', 'vedits'), async (req, res) => {
   const jobs = await prisma.vbvJob.findMany({
     where: { createdById: req.vbvUser.userId },
     include: { assignedTo: { select: { name: true } } },
@@ -48,10 +64,21 @@ router.get('/mine', auth, role('social_media', 'lead_editor', 'admin'), async (r
   res.json(jobs);
 });
 
-// GET /vbv/jobs/for-review — lead_approved jobs created by this social_media user
-router.get('/for-review', auth, role('social_media', 'admin'), async (req, res) => {
+// GET /vbv/jobs/for-review — lead_approved jobs for the reviewer's role
+router.get('/for-review', auth, role('social_media', 'vedits', 'admin'), async (req, res) => {
+  const { role: userRole, userId } = req.vbvUser;
+
+  const where = { status: 'lead_approved' };
+  if (userRole === 'social_media') {
+    where.briefType = { not: 'vedits' };
+    where.createdById = userId;
+  } else if (userRole === 'vedits') {
+    where.briefType = 'vedits';
+  }
+  // admin: no additional filters — sees all lead_approved
+
   const jobs = await prisma.vbvJob.findMany({
-    where: { status: 'lead_approved', createdById: req.vbvUser.userId },
+    where,
     include: {
       assignedTo: { select: { id: true, name: true, email: true } },
       submissions: { orderBy: { submittedAt: 'desc' }, take: 1 },
@@ -161,6 +188,11 @@ router.post('/:id/assign', auth, role('lead_editor', 'admin'), async (req, res) 
   const { editorId } = req.body;
   if (!editorId) return res.status(400).json({ error: 'editorId required' });
 
+  const editor = await prisma.vbvUser.findUnique({ where: { id: editorId } });
+  if (!editor) return res.status(404).json({ error: 'Editor not found' });
+
+  const assigner = await prisma.vbvUser.findUnique({ where: { id: req.vbvUser.userId } });
+
   const updated = await prisma.vbvJob.update({
     where: { id: req.params.id },
     data: { assignedToId: editorId, status: 'assigned', claimedAt: new Date() },
@@ -172,6 +204,54 @@ router.post('/:id/assign', auth, role('lead_editor', 'admin'), async (req, res) 
   await prisma.vbvActivityLog.create({
     data: { actorId: req.vbvUser.userId, actionType: 'job_assigned', detail: `Assigned job: ${updated.title}` },
   });
+
+  try {
+    await sendAssignmentEmail({
+      editorEmail: editor.email,
+      editorName: editor.name,
+      jobTitle: updated.title,
+      assignedBy: assigner.name,
+    });
+  } catch (e) { console.error('Email error:', e.message); }
+
+  res.json(updated);
+});
+
+// POST /vbv/jobs/:id/reassign — lead_editor or admin reassigns an already-assigned job
+router.post('/:id/reassign', auth, role('lead_editor', 'admin'), async (req, res) => {
+  const { editorId } = req.body;
+  if (!editorId) return res.status(400).json({ error: 'editorId required' });
+
+  const job = await prisma.vbvJob.findUnique({ where: { id: req.params.id } });
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  if (job.status === 'sm_approved') return res.status(400).json({ error: 'Cannot reassign a completed job' });
+  if (job.status === 'open') return res.status(400).json({ error: 'Job is unassigned — use /assign instead' });
+
+  const editor = await prisma.vbvUser.findUnique({ where: { id: editorId } });
+  if (!editor) return res.status(404).json({ error: 'Editor not found' });
+
+  const assigner = await prisma.vbvUser.findUnique({ where: { id: req.vbvUser.userId } });
+
+  const updated = await prisma.vbvJob.update({
+    where: { id: req.params.id },
+    data: { assignedToId: editorId, status: 'assigned', claimedAt: new Date() },
+  });
+
+  await prisma.vbvTimelineLog.create({
+    data: { jobId: updated.id, actorId: req.vbvUser.userId, action: 'reassigned', note: `Reassigned to ${editor.name}` },
+  });
+  await prisma.vbvActivityLog.create({
+    data: { actorId: req.vbvUser.userId, actionType: 'job_reassigned', detail: `Reassigned job: ${updated.title} to ${editor.name}` },
+  });
+
+  try {
+    await sendAssignmentEmail({
+      editorEmail: editor.email,
+      editorName: editor.name,
+      jobTitle: updated.title,
+      assignedBy: assigner.name,
+    });
+  } catch (e) { console.error('Email error:', e.message); }
 
   res.json(updated);
 });
@@ -278,8 +358,9 @@ router.post('/:id/send-back', auth, role('lead_editor', 'admin'), async (req, re
   res.json({ success: true });
 });
 
-// POST /vbv/jobs/:id/sm-approve — social media approves → sm_approved
-router.post('/:id/sm-approve', auth, role('social_media', 'admin'), async (req, res) => {
+// POST /vbv/jobs/:id/sm-approve — reviewer approves → sm_approved
+router.post('/:id/sm-approve', auth, role('social_media', 'vedits', 'admin'), async (req, res) => {
+  const { role: userRole, userId } = req.vbvUser;
   const job = await prisma.vbvJob.findUnique({
     where: { id: req.params.id },
     include: {
@@ -288,7 +369,13 @@ router.post('/:id/sm-approve', auth, role('social_media', 'admin'), async (req, 
     },
   });
   if (!job) return res.status(404).json({ error: 'Job not found' });
-  if (job.createdById !== req.vbvUser.userId && req.vbvUser.role !== 'admin') {
+  if (userRole === 'social_media' && job.briefType === 'vedits') {
+    return res.status(403).json({ error: 'Vedits jobs are reviewed by the Vedits team' });
+  }
+  if (userRole === 'vedits' && job.briefType !== 'vedits') {
+    return res.status(403).json({ error: 'You can only review Vedits jobs' });
+  }
+  if (userRole === 'social_media' && job.createdById !== userId) {
     return res.status(403).json({ error: 'You can only review briefs you created' });
   }
 
@@ -321,11 +408,12 @@ router.post('/:id/sm-approve', auth, role('social_media', 'admin'), async (req, 
   res.json({ success: true });
 });
 
-// POST /vbv/jobs/:id/sm-send-back — social media sends back → sent_back_by_sm
-router.post('/:id/sm-send-back', auth, role('social_media', 'admin'), async (req, res) => {
+// POST /vbv/jobs/:id/sm-send-back — reviewer sends back → sent_back_by_sm
+router.post('/:id/sm-send-back', auth, role('social_media', 'vedits', 'admin'), async (req, res) => {
   const { smNote } = req.body;
   if (!smNote?.trim()) return res.status(400).json({ error: 'Correction note is required' });
 
+  const { role: userRole, userId } = req.vbvUser;
   const job = await prisma.vbvJob.findUnique({
     where: { id: req.params.id },
     include: {
@@ -334,7 +422,13 @@ router.post('/:id/sm-send-back', auth, role('social_media', 'admin'), async (req
     },
   });
   if (!job) return res.status(404).json({ error: 'Job not found' });
-  if (job.createdById !== req.vbvUser.userId && req.vbvUser.role !== 'admin') {
+  if (userRole === 'social_media' && job.briefType === 'vedits') {
+    return res.status(403).json({ error: 'Vedits jobs are reviewed by the Vedits team' });
+  }
+  if (userRole === 'vedits' && job.briefType !== 'vedits') {
+    return res.status(403).json({ error: 'You can only review Vedits jobs' });
+  }
+  if (userRole === 'social_media' && job.createdById !== userId) {
     return res.status(403).json({ error: 'You can only review briefs you created' });
   }
 
@@ -364,6 +458,22 @@ router.post('/:id/sm-send-back', auth, role('social_media', 'admin'), async (req
       smNote,
     });
   } catch (e) { console.error('Email error:', e.message); }
+
+  res.json({ success: true });
+});
+
+// DELETE /vbv/jobs/:id — admin, lead_editor, social_media, vedits can delete a job
+router.delete('/:id', auth, role('admin', 'lead_editor', 'social_media', 'vedits'), async (req, res) => {
+  const job = await prisma.vbvJob.findUnique({ where: { id: req.params.id } });
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+
+  await prisma.vbvTimelineLog.deleteMany({ where: { jobId: job.id } });
+  await prisma.vbvSubmission.deleteMany({ where: { jobId: job.id } });
+  await prisma.vbvJob.delete({ where: { id: job.id } });
+
+  await prisma.vbvActivityLog.create({
+    data: { actorId: req.vbvUser.userId, actionType: 'job_deleted', detail: `Deleted job: ${job.title}` },
+  });
 
   res.json({ success: true });
 });

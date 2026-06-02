@@ -1,11 +1,12 @@
 async function vbvRenderLeadEditorDashboard() {
-  let pool = [], queue = [], inSmReview = [], completed = [], editors = [];
+  let pool = [], queue = [], inSmReview = [], completed = [], active = [], editors = [];
   try {
-    [pool, queue, inSmReview, completed] = await Promise.all([
+    [pool, queue, inSmReview, completed, active] = await Promise.all([
       vbvApi('GET', '/vbv/jobs/pool'),
       vbvApi('GET', '/vbv/jobs/review-queue'),
       vbvApi('GET', '/vbv/jobs/in-sm-review'),
       vbvApi('GET', '/vbv/jobs/completed'),
+      vbvApi('GET', '/vbv/jobs/all'),
     ]);
     editors = await vbvApi('GET', '/vbv/users/editors').catch(() => []);
   } catch(e) { return `<div class="vbv-alert vbv-alert-error">${e.message}</div>`; }
@@ -22,6 +23,7 @@ async function vbvRenderLeadEditorDashboard() {
               ${editorOptions}
             </select>
             <button class="vbv-btn vbv-btn-primary vbv-btn-sm vbv-assign-btn" data-job-id="${job.id}">Assign</button>
+            <button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-job-btn" data-job-id="${job.id}" data-job-title="${escapeHtml(job.title)}">Delete</button>
           </div>`;
         return vbvJobCardHTML(job, { actions: assignRow });
       }).join('')
@@ -60,6 +62,30 @@ async function vbvRenderLeadEditorDashboard() {
         return vbvJobCardHTML(job, { extraDetails: extra, actions });
       }).join('')
     : '<div class="vbv-empty">No submissions to review.</div>';
+
+  // ── Active Jobs (reassign) ─────────────────────────────────────────────
+  const reassignableStatuses = ['assigned', 'in_progress', 'sent_back_by_lead', 'sent_back_by_sm'];
+  const reassignable = active.filter(j => reassignableStatuses.includes(j.status));
+  const reassignRows = reassignable.length
+    ? reassignable.map(j => `
+        <tr>
+          <td>${escapeHtml(j.title)}</td>
+          <td>${escapeHtml(j.artistName)}</td>
+          <td>${escapeHtml(j.assignedTo?.name || '—')}</td>
+          <td>${vbvStatusBadge(j.status)}</td>
+          <td>${new Date(j.deadline).toLocaleDateString('en-GB')}</td>
+          <td>
+            <div class="vbv-assign-row">
+              <select id="reassign-sel-${j.id}" class="vbv-assign-sel">
+                <option value="">Select editor…</option>
+                ${editorOptions}
+              </select>
+              <button class="vbv-btn vbv-btn-secondary vbv-btn-sm vbv-reassign-btn" data-job-id="${j.id}">Reassign</button>
+              <button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-job-btn" data-job-id="${j.id}" data-job-title="${escapeHtml(j.title)}">Delete</button>
+            </div>
+          </td>
+        </tr>`).join('')
+    : '<tr><td colspan="6"><div class="vbv-empty">No active jobs to reassign.</div></td></tr>';
 
   // ── In SM Review (read-only) ────────────────────────────────────────────
   const smReviewRows = inSmReview.length
@@ -100,6 +126,17 @@ async function vbvRenderLeadEditorDashboard() {
     </div>
 
     <div class="vbv-section">
+      <h2>Reassign Jobs</h2>
+      <div id="vbv-reassign-msg"></div>
+      <div class="vbv-table-wrap">
+        <table class="vbv-table">
+          <thead><tr><th>Title</th><th>Artist</th><th>Current Editor</th><th>Status</th><th>Deadline</th><th>Reassign</th></tr></thead>
+          <tbody>${reassignRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="vbv-section">
       <h2>In Social Media Review</h2>
       <div class="vbv-table-wrap">
         <table class="vbv-table">
@@ -121,6 +158,20 @@ async function vbvRenderLeadEditorDashboard() {
 }
 
 function vbvBindLeadEditorDashboard() {
+  document.querySelectorAll('.vbv-delete-job-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Delete "${btn.dataset.jobTitle}"? This cannot be undone.`)) return;
+      btn.disabled = true; btn.textContent = 'Deleting…';
+      try {
+        await vbvApi('DELETE', `/vbv/jobs/${btn.dataset.jobId}`);
+        vbvNavigate('lead-editor-dashboard');
+      } catch(err) {
+        alert(err.message);
+        btn.disabled = false; btn.textContent = 'Delete';
+      }
+    });
+  });
+
   document.querySelectorAll('.vbv-assign-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const jobId = btn.dataset.jobId;
@@ -135,6 +186,24 @@ function vbvBindLeadEditorDashboard() {
       } catch(err) {
         if (msgEl) msgEl.innerHTML = `<div class="vbv-alert vbv-alert-error">${err.message}</div>`;
         btn.disabled = false; btn.textContent = 'Assign';
+      }
+    });
+  });
+
+  document.querySelectorAll('.vbv-reassign-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const jobId = btn.dataset.jobId;
+      const sel = document.getElementById(`reassign-sel-${jobId}`);
+      const editorId = sel?.value;
+      const msgEl = document.getElementById('vbv-reassign-msg');
+      if (!editorId) { if (msgEl) msgEl.innerHTML = '<div class="vbv-alert vbv-alert-error">Select an editor first.</div>'; return; }
+      btn.disabled = true; btn.textContent = 'Reassigning…';
+      try {
+        await vbvApi('POST', `/vbv/jobs/${jobId}/reassign`, { editorId });
+        vbvNavigate('lead-editor-dashboard');
+      } catch(err) {
+        if (msgEl) msgEl.innerHTML = `<div class="vbv-alert vbv-alert-error">${err.message}</div>`;
+        btn.disabled = false; btn.textContent = 'Reassign';
       }
     });
   });

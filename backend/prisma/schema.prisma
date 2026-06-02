@@ -75,20 +75,21 @@ model IgPost {
 // ── VBV Creative Pipeline ──────────────────────────────────────────────────
 
 model VbvUser {
-  id           String             @id @default(uuid())
-  name         String
-  email        String             @unique
-  passwordHash String
-  role         VbvRole
-  isActive     Boolean            @default(true)
-  createdAt    DateTime           @default(now())
-  credential   VbvUserCredential?
-  createdJobs  VbvJob[]           @relation("CreatedBy")
-  assignedJobs VbvJob[]           @relation("AssignedTo")
-  submissions  VbvSubmission[]
-  smReviews    VbvSubmission[]    @relation("SmReviewer")
-  timelineLogs VbvTimelineLog[]
-  activityLogs VbvActivityLog[]
+  id                   String             @id @default(uuid())
+  name                 String
+  email                String             @unique
+  passwordHash         String
+  role                 VbvRole
+  isActive             Boolean            @default(true)
+  sermonPipelineAccess Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  credential           VbvUserCredential?
+  createdJobs          VbvJob[]           @relation("CreatedBy")
+  assignedJobs         VbvJob[]           @relation("AssignedTo")
+  submissions          VbvSubmission[]
+  smReviews            VbvSubmission[]    @relation("SmReviewer")
+  timelineLogs         VbvTimelineLog[]
+  activityLogs         VbvActivityLog[]
 }
 
 enum VbvRole {
@@ -96,6 +97,7 @@ enum VbvRole {
   editor
   lead_editor
   admin
+  vedits
 }
 
 model VbvUserCredential {
@@ -133,6 +135,7 @@ model VbvJob {
 enum VbvBriefType {
   timestamp_clip
   full_edit
+  vedits
 }
 
 enum VbvJobStatus {

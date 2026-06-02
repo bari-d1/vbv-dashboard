@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Brief — VBV</title>
+  <link rel="stylesheet" href="/vbv-pipeline/vbvStyle.css">
+  <style>
+    body { background: var(--bg); }
+
+    .bf-shell { max-width: 700px; margin: 0 auto; padding: 32px 24px 64px; }
+
+    .bf-topbar {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 32px;
+      padding-bottom: 20px; border-bottom: 1px solid var(--border);
+    }
+    .bf-logo { font-size: 1rem; font-weight: 700; color: var(--text); text-decoration: none; }
+    .bf-logo span { color: var(--accent); }
+    .bf-back { font-size: 0.82rem; color: var(--accent); text-decoration: none; margin-left: auto; }
+    .bf-back:hover { text-decoration: underline; }
+
+    h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+    .bf-subtitle { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 28px; }
+
+    /* Read-only block */
+    .bf-readonly-section {
+      background: #f8f9fa; border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px 18px; margin-bottom: 28px;
+    }
+    .bf-readonly-section .bf-ro-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 2px;
+    }
+    .bf-readonly-section .bf-ro-value {
+      font-size: 0.88rem; color: var(--text); margin-bottom: 10px; line-height: 1.5;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .bf-readonly-section .bf-ro-value:last-child { margin-bottom: 0; }
+    .bf-ro-timestamps { display: flex; gap: 24px; }
+    .bf-ro-timestamps > div { flex: 1; }
+
+    /* Read-only inputs */
+    .bf-ro-input {
+      width: 100%; padding: 9px 12px; border: 1px solid #e0e0e0;
+      border-radius: 6px; font-size: 0.88rem; background: #f0f2f5;
+      color: var(--text-muted); cursor: default;
+    }
+    textarea.bf-ro-input { resize: none; min-height: 60px; }
+    textarea.bf-ro-input.tall { min-height: 80px; }
+
+    /* Field errors */
+    .bf-field-error {
+      display: none; color: var(--accent); font-size: 0.78rem; margin-top: 3px;
+    }
+
+    /* Divider */
+    .bf-divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 24px 0; position: relative;
+    }
+    .bf-divider-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 18px;
+    }
+
+    /* Success */
+    .bf-success-box {
+      background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 10px;
+      padding: 32px; text-align: center;
+    }
+    .bf-success-box .bf-check { font-size: 2.5rem; margin-bottom: 12px; }
+    .bf-success-box h2 { font-size: 1.2rem; margin-bottom: 8px; color: #065f46; }
+    .bf-success-box p { font-size: 0.88rem; color: #047857; margin-bottom: 20px; }
+    .bf-success-box a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .bf-success-box a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="bf-shell">
+
+  <!-- Topbar -->
+  <div class="bf-topbar">
+    <a class="bf-logo" href="/vbv-pipeline/vbv.html">VBV <span>Pipeline</span></a>
+    <a class="bf-back" id="bf-back-link" href="/vbv-pipeline/vbv.html">&larr; Back to Review</a>
+  </div>
+
+  <h1>Create Brief</h1>
+  <p class="bf-subtitle">Review the clip details below, fill in the required fields, and submit to the job pool.</p>
+
+  <!-- Loading / error states -->
+  <div id="bf-loading" class="vbv-loading">Loading candidate&hellip;</div>
+  <div id="bf-error" class="vbv-alert vbv-alert-error" style="display:none;"></div>
+
+  <!-- Main body -->
+  <div id="bf-body" style="display:none;">
+
+    <div id="bf-form-wrap">
+
+      <!-- Auto-populated read-only section -->
+      <div class="bf-readonly-section">
+        <p class="bf-divider-label" style="margin-bottom:14px;">Clip Details &mdash; auto-populated, read only</p>
+
+        <div class="bf-ro-label">Source</div>
+        <div class="bf-ro-value"><input class="bf-ro-input" id="bf-source" readonly></div>
+
+        <div class="bf-ro-timestamps">
+          <div>
+            <div class="bf-ro-label">Start</div>
+            <div class="bf-ro-value"><input class="bf-ro-input" id="bf-start" readonly></div>
+          </div>
+          <div>
+            <div class="bf-ro-label">End</div>
+            <div class="bf-ro-value"><input class="bf-ro-input" id="bf-end" readonly></div>
+          </div>
+        </div>
+
+        <div class="bf-ro-label">Hook</div>
+        <div class="bf-ro-value"><textarea class="bf-ro-input tall" id="bf-hook" readonly></textarea></div>
+
+        <div class="bf-ro-label">Payoff</div>
+        <div class="bf-ro-value"><textarea class="bf-ro-input tall" id="bf-payoff" readonly></textarea></div>
+      </div>
+
+      <!-- Manual input section -->
+      <p class="bf-divider-label">Brief Details &mdash; fill in below</p>
+
+      <form id="bf-form" novalidate>
+
+        <div class="vbv-form-group">
+          <label>Church / Speaker Name *</label>
+          <input type="text" id="bf-church" placeholder="e.g. Elevation Church — Steven Furtick">
+          <div class="bf-field-error" id="bf-err-church"></div>
+        </div>
+
+        <div class="vbv-form-group">
+          <label>Sermon Title or Series Name *</label>
+          <input type="text" id="bf-sermon-title" placeholder="e.g. Greater Is Coming — Part 3">
+          <div class="bf-field-error" id="bf-err-sermon-title"></div>
+        </div>
+
+        <div class="vbv-form-group">
+          <label>Platform Target *</label>
+          <div class="vbv-checkboxes">
+            <label><input type="checkbox" name="bf-platform" value="Instagram"> Instagram</label>
+            <label><input type="checkbox" name="bf-platform" value="TikTok"> TikTok</label>
+            <label><input type="checkbox" name="bf-platform" value="YouTube"> YouTube</label>
+          </div>
+          <div class="bf-field-error" id="bf-err-platform"></div>
+        </div>
+
+        <div class="vbv-form-group">
+          <label>Deadline *</label>
+          <input type="date" id="bf-deadline">
+          <div class="bf-field-error" id="bf-err-deadline"></div>
+        </div>
+
+        <div class="vbv-form-group">
+          <label>Additional Notes <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+          <textarea id="bf-notes" placeholder="Any extra context for the editor — style, pacing, text overlays…"></textarea>
+        </div>
+
+        <div id="bf-error" class="vbv-alert vbv-alert-error" style="display:none;margin-bottom:16px;"></div>
+
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <button type="submit" class="vbv-btn vbv-btn-primary" id="bf-submit">Submit Brief</button>
+          <a id="bf-back-link-2" href="#" class="vbv-btn vbv-btn-secondary" onclick="history.back();return false;">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Success state -->
+    <div id="bf-success" class="bf-success-box" style="display:none;">
+      <div class="bf-check">&#10003;</div>
+      <h2>Brief submitted to job pool</h2>
+      <p>The clip brief has been added and is now available for editors to claim.</p>
+      <a id="bf-success-review-link" href="#">&larr; Back to candidate review</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="/vbv-pipeline/vbvBrief.js"></script>
+</body>
+</html>

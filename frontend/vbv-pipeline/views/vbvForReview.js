@@ -1,11 +1,14 @@
 async function vbvRenderForReview() {
+  const user = vbvCurrentUser();
+  const pageTitle = user?.role === 'vedits' ? 'Vedits Review Queue' : 'For Review';
+
   let jobs = [];
   try { jobs = await vbvApi('GET', '/vbv/jobs/for-review'); } catch(e) {
     return `<div class="vbv-alert vbv-alert-error">${e.message}</div>`;
   }
 
   if (!jobs.length) {
-    return `<h1>For Review</h1><div class="vbv-empty">No edits are waiting for your review right now.</div>`;
+    return `<h1>${pageTitle}</h1><div class="vbv-empty">No edits are waiting for your review right now.</div>`;
   }
 
   const cards = jobs.map(job => {
@@ -60,7 +63,8 @@ async function vbvRenderForReview() {
 
     const actions = `
       <button class="vbv-btn vbv-btn-success vbv-btn-sm vbv-sm-approve-btn" data-job-id="${job.id}">Approve</button>
-      <button class="vbv-btn vbv-btn-danger vbv-btn-sm" onclick="document.getElementById('sm-sendback-form-${job.id}').style.display=''">Request Correction</button>`;
+      <button class="vbv-btn vbv-btn-danger vbv-btn-sm" onclick="document.getElementById('sm-sendback-form-${job.id}').style.display=''">Request Correction</button>
+      <button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-job-btn" data-job-id="${job.id}" data-job-title="${escapeHtml(job.title)}" style="margin-left:auto;">Delete</button>`;
 
     return `
       <div class="vbv-card" data-job-id="${job.id}">
@@ -79,12 +83,26 @@ async function vbvRenderForReview() {
   }).join('');
 
   return `
-    <h1>For Review</h1>
+    <h1>${pageTitle}</h1>
     <div id="vbv-fr-msg"></div>
     ${cards}`;
 }
 
 function vbvBindForReview() {
+  document.querySelectorAll('.vbv-delete-job-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Delete "${btn.dataset.jobTitle}"? This cannot be undone.`)) return;
+      btn.disabled = true; btn.textContent = 'Deleting…';
+      try {
+        await vbvApi('DELETE', `/vbv/jobs/${btn.dataset.jobId}`);
+        vbvNavigate('for-review');
+      } catch(err) {
+        alert(err.message);
+        btn.disabled = false; btn.textContent = 'Delete';
+      }
+    });
+  });
+
   document.querySelectorAll('.vbv-sm-approve-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const jobId = btn.dataset.jobId;

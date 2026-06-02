@@ -29,6 +29,7 @@ const DEFAULT_VIEW = {
   social_media: 'social-dashboard',
   editor:       'job-pool',
   lead_editor:  'lead-editor-dashboard',
+  vedits:       'vedits-jobs',
 };
 
 async function vbvNavigate(view) {
@@ -57,8 +58,16 @@ async function vbvNavigate(view) {
         html = await vbvRenderJobPool(); break;
       case 'editor-dashboard':
         html = await vbvRenderEditorDashboard(); break;
+      case 'all-jobs':
+        html = await vbvRenderAllJobs(); break;
+      case 'vedits-create-brief':
+        html = await vbvRenderVeditsBrief(); break;
+      case 'vedits-jobs':
+        html = await vbvRenderVeditsJobs(); break;
       case 'lead-editor-dashboard':
         html = await vbvRenderLeadEditorDashboard(); break;
+      case 'sermon-pipeline':
+        html = vbvRenderSermonPipeline(); break;
       default:
         html = '<div class="vbv-empty">View not found.</div>';
     }
@@ -77,7 +86,11 @@ async function vbvNavigate(view) {
     case 'for-review': vbvBindForReview(); break;
     case 'job-pool':       vbvBindJobPool(); break;
     case 'editor-dashboard': vbvBindEditorDashboard(); break;
+    case 'all-jobs':              vbvBindAllJobs(); break;
+    case 'vedits-create-brief':   vbvBindVeditsBrief(); break;
+    case 'vedits-jobs':           vbvBindVeditsJobs(); break;
     case 'lead-editor-dashboard': vbvBindLeadEditorDashboard(); break;
+    case 'sermon-pipeline': vbvBindSermonPipeline(); break;
   }
 }
 

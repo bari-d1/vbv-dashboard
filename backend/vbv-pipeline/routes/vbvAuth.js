@@ -13,12 +13,13 @@ router.post('/login', async (req, res) => {
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
+  const sermonAccess = user.role === 'admin' || user.role === 'vedits' || user.sermonPipelineAccess;
   const token = jwt.sign(
-    { userId: user.id, role: user.role, name: user.name, email: user.email },
+    { userId: user.id, role: user.role, name: user.name, email: user.email, sermonPipelineAccess: sermonAccess },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
-  res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, sermonPipelineAccess: sermonAccess } });
 });
 
 module.exports = router;

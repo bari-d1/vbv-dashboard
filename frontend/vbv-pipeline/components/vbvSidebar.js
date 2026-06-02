@@ -3,10 +3,12 @@ function vbvRenderSidebar(user, activeView) {
     admin: [
       { view: 'admin-panel', label: 'User Management' },
       { view: 'activity-log', label: 'Activity Log' },
+      { view: 'all-jobs', label: 'All Jobs' },
       { view: 'social-dashboard', label: 'Create Brief' },
       { view: 'my-briefs', label: 'My Briefs' },
       { view: 'for-review', label: 'For Review' },
       { view: 'lead-editor-dashboard', label: 'Assign & Review' },
+      { view: 'sermon-pipeline', label: 'Clipping Tool' },
     ],
     social_media: [
       { view: 'social-dashboard', label: 'Create Brief' },
@@ -24,8 +26,20 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'editor-dashboard', label: 'My Jobs' },
       { view: 'lead-editor-dashboard', label: 'Review Queue' },
     ],
+    vedits: [
+      { view: 'vedits-create-brief', label: 'Create Brief' },
+      { view: 'vedits-jobs', label: 'All Vedits Jobs' },
+      { view: 'for-review', label: 'Review Queue' },
+      { view: 'sermon-pipeline', label: 'Clipping Tool' },
+    ],
   };
   const items = navItems[user.role] || [];
+
+  // Append Clipping Tool for non-admin users who have been explicitly granted access
+  if (user.role !== 'admin' && user.sermonPipelineAccess) {
+    items.push({ view: 'sermon-pipeline', label: 'Clipping Tool' });
+  }
+
   const links = items.map(item =>
     `<a href="#" class="${activeView === item.view ? 'active' : ''}" data-view="${item.view}"><span>${item.label}</span></a>`
   ).join('');

@@ -9,7 +9,12 @@ function vbvJobCardHTML(job, opts = {}) {
     <p><strong>Platforms:</strong> ${escapeHtml(platforms)}</p>
     <p><strong>Deadline:</strong> ${deadline}</p>`;
 
-  if (job.briefType === 'timestamp_clip') {
+  if (job.briefType === 'vedits') {
+    detailsHTML += `
+      <p><strong>Start:</strong> ${escapeHtml(job.startTimestamp || '—')}</p>
+      <p><strong>End:</strong> ${escapeHtml(job.endTimestamp || '—')}</p>
+      ${job.clipNotes ? `<p><strong>Hook &amp; Payoff:</strong><br><span style="white-space:pre-wrap;font-size:0.82rem;">${escapeHtml(job.clipNotes)}</span></p>` : ''}`;
+  } else if (job.briefType === 'timestamp_clip') {
     detailsHTML += `
       <p><strong>Start:</strong> ${escapeHtml(job.startTimestamp || '—')}</p>
       <p><strong>End:</strong> ${escapeHtml(job.endTimestamp || '—')}</p>
@@ -22,11 +27,15 @@ function vbvJobCardHTML(job, opts = {}) {
 
   const actionsHTML = opts.actions || '';
 
+  const vbvPipelineTag = job.briefType === 'vedits'
+    ? `<span class="vbv-badge" style="background:#ede9fe;color:#7c3aed;margin-left:6px;">VBV</span>`
+    : '';
+
   return `
     <div class="vbv-card" data-job-id="${job.id}">
       <div class="vbv-card-header">
         <div>
-          <div class="vbv-card-title">${escapeHtml(job.title)}</div>
+          <div class="vbv-card-title">${escapeHtml(job.title)}${vbvPipelineTag}</div>
           <div class="vbv-card-meta">${escapeHtml(job.artistName)} &bull; ${vbvStatusBadge(job.briefType)} &bull; ${vbvStatusBadge(job.status)}</div>
         </div>
         <button class="vbv-btn vbv-btn-secondary vbv-btn-sm" onclick="vbvToggleDetails('${detailsId}', this)">Details ▾</button>
