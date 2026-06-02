@@ -68,10 +68,11 @@ router.post('/', auth, role('admin'), async (req, res) => {
 
 // PATCH /vbv/users/:id
 router.patch('/:id', auth, role('admin'), async (req, res) => {
-  const { roleValue, isActive } = req.body;
+  const { roleValue, isActive, sermonPipelineAccess } = req.body;
   const data = {};
   if (roleValue !== undefined) data.role = roleValue;
   if (isActive !== undefined) data.isActive = isActive;
+  if (sermonPipelineAccess !== undefined) data.sermonPipelineAccess = sermonPipelineAccess;
 
   const user = await prisma.vbvUser.update({ where: { id: req.params.id }, data });
   await prisma.vbvActivityLog.create({

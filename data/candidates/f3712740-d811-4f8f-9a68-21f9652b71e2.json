@@ -1,0 +1,45 @@
+{
+  "sessionId": "f3712740-d811-4f8f-9a68-21f9652b71e2",
+  "createdAt": "2026-06-01T01:37:03.415Z",
+  "sourceType": "youtube",
+  "sourceReference": "https://www.youtube.com/watch?v=KniU_gBgOE4",
+  "candidates": [
+    {
+      "start": "00:01:41",
+      "end": "00:02:30",
+      "hook": "God could have introduced himself in any way, but he chose to introduce himself as a Creator—and then made us in his image",
+      "payoff": "This means every human being, whether naturally creative or not, is a creator made in the likeness of the Creator, capable of reaching into heaven and bringing creative solutions to earth",
+      "status": "briefed",
+      "briefId": "540f1247-809f-4cea-acc6-e9b48425d1ff"
+    },
+    {
+      "start": "00:02:37",
+      "end": "00:03:05",
+      "hook": "You might not be a natural creative, but I am a creator—and that changes everything about what you're capable of",
+      "payoff": "The world doesn't care if you're a natural creative; it's looking for creative solutions, and creators made in God's image can provide them",
+      "status": "briefed",
+      "briefId": "e16348a4-345b-49c9-a0b7-b538f29e3de0"
+    },
+    {
+      "start": "00:03:40",
+      "end": "00:04:03",
+      "hook": "Someone said there's nothing new under the sun, but here's what they missed: our God does not dwell under the sun",
+      "payoff": "Because God doesn't live under the sun, you can reach into the atmosphere of heaven and bring down something the world has never seen before",
+      "status": "approved"
+    },
+    {
+      "start": "00:01:03",
+      "end": "00:01:16",
+      "hook": "This is just a show like any other show unless we connect it to the word of God",
+      "payoff": "What differentiates us as people of God is that we are connected to the word and we engage with it—that's what makes this more than entertainment",
+      "status": "rejected"
+    },
+    {
+      "start": "00:04:03",
+      "end": "00:04:19",
+      "hook": "Whether you're a natural creative or not, there's a kingdom mandate and identity you can tap into",
+      "payoff": "As a creator aligned with kingdom identity, you can bring innovative solutions that the world desperately needs",
+      "status": "approved"
+    }
+  ]
+}

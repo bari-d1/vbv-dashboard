@@ -73,19 +73,34 @@ async function vbvRenderMyBriefs() {
       <td>${new Date(j.deadline).toLocaleDateString('en-GB')}</td>
       <td>${vbvStatusBadge(j.status)}</td>
       <td>${j.assignedTo?.name ? escapeHtml(j.assignedTo.name) : '—'}</td>
-    </tr>`).join('') || '<tr><td colspan="6"><div class="vbv-empty">No briefs created yet.</div></td></tr>';
+      <td><button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-brief-btn" data-job-id="${j.id}" data-job-title="${escapeHtml(j.title)}">Delete</button></td>
+    </tr>`).join('') || '<tr><td colspan="7"><div class="vbv-empty">No briefs created yet.</div></td></tr>';
 
   return `
     <h1>My Briefs</h1>
     <div class="vbv-table-wrap">
       <table class="vbv-table">
-        <thead><tr><th>Title</th><th>Artist</th><th>Type</th><th>Deadline</th><th>Status</th><th>Assigned To</th></tr></thead>
+        <thead><tr><th>Title</th><th>Artist</th><th>Type</th><th>Deadline</th><th>Status</th><th>Assigned To</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
 }
 
 function vbvBindSocialDashboard() {
+  document.querySelectorAll('.vbv-delete-brief-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Delete "${btn.dataset.jobTitle}"? This cannot be undone.`)) return;
+      btn.disabled = true; btn.textContent = 'Deleting…';
+      try {
+        await vbvApi('DELETE', `/vbv/jobs/${btn.dataset.jobId}`);
+        vbvNavigate('my-briefs');
+      } catch(err) {
+        alert(err.message);
+        btn.disabled = false; btn.textContent = 'Delete';
+      }
+    });
+  });
+
   let briefType = 'timestamp_clip';
 
   document.querySelectorAll('#vbv-brief-toggle button').forEach(btn => {

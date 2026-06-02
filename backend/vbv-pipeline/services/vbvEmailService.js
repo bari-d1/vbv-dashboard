@@ -1,17 +1,12 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-function getTransport() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
+function getClient() {
+  return new Resend(process.env.RESEND_API_KEY);
 }
 
 async function sendWelcomeEmail({ name, email, role, password }) {
   const dashboardUrl = process.env.VBV_DASHBOARD_URL || 'http://localhost:3001/vbv.html';
-  await getTransport().sendMail({
+  await getClient().emails.send({
     from: process.env.EMAIL_FROM,
     to: email,
     subject: 'Your VBV Dashboard Login Details',
@@ -28,7 +23,7 @@ async function sendWelcomeEmail({ name, email, role, password }) {
 async function sendReviewNotification({ editorEmail, editorName, jobTitle, action, reviewNote }) {
   const dashboardUrl = process.env.VBV_DASHBOARD_URL || 'http://localhost:3001/vbv-pipeline/vbv.html';
   const label = action === 'lead_approved' ? 'Approved by Lead Editor — awaiting Social Media review' : 'Sent Back by Lead Editor';
-  await getTransport().sendMail({
+  await getClient().emails.send({
     from: process.env.EMAIL_FROM,
     to: editorEmail,
     subject: `Update on your edit: ${jobTitle}`,
@@ -44,15 +39,14 @@ async function sendReviewNotification({ editorEmail, editorName, jobTitle, actio
 
 async function sendSmCorrectionEmail({ jobTitle, editor, leadEditors, smNote }) {
   const dashboardUrl = process.env.VBV_DASHBOARD_URL || 'http://localhost:3001/vbv-pipeline/vbv.html';
-  const ccAddresses = leadEditors.map(le => le.email).join(', ');
-  await getTransport().sendMail({
+  await getClient().emails.send({
     from: process.env.EMAIL_FROM,
     to: editor?.email,
-    cc: ccAddresses || undefined,
-    subject: `Correction requested by Social Media: ${jobTitle}`,
+    cc: leadEditors.map(le => le.email),
+    subject: `Correction requested: ${jobTitle}`,
     html: `
       <h2>Hi ${editor?.name},</h2>
-      <p>Social Media has requested a correction on <strong>${jobTitle}</strong>.</p>
+      <p>A correction has been requested on <strong>${jobTitle}</strong>.</p>
       <p><strong>Correction note:</strong> ${smNote}</p>
       <p>Please revise your edit and resubmit for Lead Editor review.</p>
       <p><a href="${dashboardUrl}">View in Dashboard</a></p>
@@ -60,20 +54,36 @@ async function sendSmCorrectionEmail({ jobTitle, editor, leadEditors, smNote }) 
   });
 }
 
+async function sendAssignmentEmail({ editorEmail, editorName, jobTitle, assignedBy }) {
+  const dashboardUrl = process.env.VBV_DASHBOARD_URL || 'http://localhost:3001/vbv-pipeline/vbv.html';
+  await getClient().emails.send({
+    from: process.env.EMAIL_FROM,
+    to: editorEmail,
+    subject: `You've been assigned a job: ${jobTitle}`,
+    html: `
+      <h2>Hi ${editorName},</h2>
+      <p>You have been assigned a new edit job by <strong>${assignedBy}</strong>.</p>
+      <p><strong>Job:</strong> ${jobTitle}</p>
+      <p>Please log in to accept or view the details.</p>
+      <p><a href="${dashboardUrl}">Open Dashboard</a></p>
+    `,
+  });
+}
+
 async function sendSmApprovalEmail({ jobTitle, editor, leadEditors }) {
   const dashboardUrl = process.env.VBV_DASHBOARD_URL || 'http://localhost:3001/vbv-pipeline/vbv.html';
-  const allRecipients = [editor?.email, ...leadEditors.map(le => le.email)].filter(Boolean).join(', ');
-  await getTransport().sendMail({
+  const allRecipients = [editor?.email, ...leadEditors.map(le => le.email)].filter(Boolean);
+  await getClient().emails.send({
     from: process.env.EMAIL_FROM,
     to: allRecipients,
     subject: `Edit approved: ${jobTitle}`,
     html: `
       <h2>Pipeline complete ✓</h2>
-      <p>Social Media has approved the edit for <strong>${jobTitle}</strong>.</p>
+      <p>The edit for <strong>${jobTitle}</strong> has been approved.</p>
       <p>This job is now complete.</p>
       <p><a href="${dashboardUrl}">View in Dashboard</a></p>
     `,
   });
 }
 
-module.exports = { sendWelcomeEmail, sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail };
+module.exports = { sendWelcomeEmail, sendAssignmentEmail, sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail };

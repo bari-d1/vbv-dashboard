@@ -4,7 +4,10 @@ async function vbvRenderAdminPanel(view) {
   let users = [];
   try { users = await vbvApi('GET', '/vbv/users'); } catch(e) { return `<div class="vbv-alert vbv-alert-error">${e.message}</div>`; }
 
-  const rows = users.map(u => `
+  const rows = users.map(u => {
+    const isAdmin = u.role === 'admin';
+    const hasSermon = isAdmin || u.sermonPipelineAccess;
+    return `
     <tr>
       <td>${escapeHtml(u.name)}</td>
       <td>${escapeHtml(u.email)}</td>
@@ -19,14 +22,23 @@ async function vbvRenderAdminPanel(view) {
       <td>${u.isActive ? '<span style="color:#10b981">Active</span>' : '<span style="color:#9ca3af">Inactive</span>'}</td>
       <td>
         <select class="vbv-role-select" data-uid="${u.id}" style="font-size:0.8rem;padding:4px 8px;border:1px solid var(--border);border-radius:4px;">
-          ${['social_media','editor','lead_editor','admin'].map(r => `<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('')}
+          ${['social_media','editor','lead_editor','admin','vedits'].map(r => `<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('')}
         </select>
+      </td>
+      <td>
+        ${isAdmin
+          ? '<span style="color:#9ca3af;font-size:0.8rem;">Always on</span>'
+          : `<button class="vbv-btn vbv-btn-sm ${hasSermon ? 'vbv-btn-success' : 'vbv-btn-secondary'}" onclick="vbvToggleSermonAccess('${u.id}', ${!hasSermon})">
+              ${hasSermon ? 'Enabled' : 'Disabled'}
+            </button>`
+        }
       </td>
       <td>
         <button class="vbv-btn vbv-btn-sm ${u.isActive?'vbv-btn-secondary':'vbv-btn-primary'}" onclick="vbvToggleActive('${u.id}', ${!u.isActive})">${u.isActive?'Deactivate':'Activate'}</button>
         <button class="vbv-btn vbv-btn-sm vbv-btn-danger" onclick="vbvDeleteUser('${u.id}', '${escapeHtml(u.name)}')" style="margin-left:6px;">Delete</button>
       </td>
-    </tr>`).join('') || '<tr><td colspan="8" class="vbv-empty">No users yet.</td></tr>';
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" class="vbv-empty">No users yet.</td></tr>';
 
   return `
     <h1>User Management</h1>
@@ -50,6 +62,7 @@ async function vbvRenderAdminPanel(view) {
             <option value="editor">Editor</option>
             <option value="lead_editor">Lead Editor</option>
             <option value="admin">Admin</option>
+            <option value="vedits">Vedits</option>
           </select>
         </div>
         <button type="submit" class="vbv-btn vbv-btn-primary" style="height:40px;">Add User</button>
@@ -60,7 +73,7 @@ async function vbvRenderAdminPanel(view) {
       <div class="vbv-table-wrap">
         <table class="vbv-table">
           <thead><tr>
-            <th>Name</th><th>Email</th><th>Role</th><th>Added</th><th>Password</th><th>Status</th><th>Change Role</th><th>Actions</th>
+            <th>Name</th><th>Email</th><th>Role</th><th>Added</th><th>Password</th><th>Status</th><th>Change Role</th><th>Clipping Tool</th><th>Actions</th>
           </tr></thead>
           <tbody id="vbv-users-tbody">${rows}</tbody>
         </table>
@@ -106,6 +119,13 @@ async function vbvToggleActive(id, isActive) {
   } catch(e) { alert(e.message); }
 }
 
+async function vbvToggleSermonAccess(id, sermonPipelineAccess) {
+  try {
+    await vbvApi('PATCH', `/vbv/users/${id}`, { sermonPipelineAccess });
+    vbvNavigate('admin-panel');
+  } catch(e) { alert(e.message); }
+}
+
 async function vbvDeleteUser(id, name) {
   if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
   try {
@@ -123,7 +143,7 @@ async function vbvRenderActivityLog() {
           <label>Role</label>
           <select id="vbv-filter-role" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;">
             <option value="">All roles</option>
-            ${['social_media','editor','lead_editor','admin'].map(r=>`<option value="${r}">${r.replace('_',' ')}</option>`).join('')}
+            ${['social_media','editor','lead_editor','admin','vedits'].map(r=>`<option value="${r}">${r.replace('_',' ')}</option>`).join('')}
           </select>
         </div>
         <div class="vbv-form-group" style="margin:0">
