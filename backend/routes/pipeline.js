@@ -74,14 +74,19 @@ async function pollForResult(hetznerJobId) {
       throw new Error(`Status check failed: ${message}`);
     }
 
-    if (statusData.status === 'complete') return statusData.segments;
+    if (statusData.status === 'complete') {
+      if (!statusData.success) throw new Error(statusData.error || 'Transcription failed');
+      return statusData.segments;
+    }
     if (statusData.status === 'failed') throw new Error(statusData.error || 'Transcription failed');
+
+    if (onProgress && statusData.stage) onProgress({ stage: statusData.stage, percent: statusData.percent });
 
     await new Promise((resolve) => setTimeout(resolve, 10000));
   }
 }
 
-async function transcribeAudio(audioPath) {
+async function transcribeAudio(audioPath, onProgress) {
   if (!process.env.VBV_API_KEY) throw new Error('VBV_API_KEY environment variable is not set');
 
   const form = new FormData();
@@ -102,10 +107,10 @@ async function transcribeAudio(audioPath) {
     throw new Error(submitData.error || 'Failed to queue transcription job');
   }
 
-  return pollForResult(submitData.jobId);
+  return pollForResult(submitData.jobId, onProgress);
 }
 
-async function transcribeYouTube(url) {
+async function transcribeYouTube(url, onProgress) {
   if (!process.env.VBV_API_KEY) throw new Error('VBV_API_KEY environment variable is not set');
 
   const form = new FormData();
@@ -126,7 +131,7 @@ async function transcribeYouTube(url) {
     throw new Error(submitData.error || 'Failed to queue transcription job');
   }
 
-  return pollForResult(submitData.jobId);
+  return pollForResult(submitData.jobId, onProgress);
 }
 
 // ── Candidate session save ──────────────────────────────────────────────────
@@ -156,13 +161,17 @@ function saveCandidates({ sourceType, sourceReference, churchName, sermonTitle, 
 async function runPipelineBackground(jobId, opts) {
   const { sourceType, url, driveUrl, audioPath: uploadedPath, churchName, sermonTitle, platformTargets, sourceReference } = opts;
 
-  jobs.set(jobId, { ...jobs.get(jobId), status: 'processing' });
+  const setStage = (stage, percent = null) => {
+    const update = { ...jobs.get(jobId), status: 'processing', stage, percent };
+    jobs.set(jobId, update);
+  };
 
   let segments;
 
   if (sourceType === 'youtube') {
+    setStage('downloading', 0);
     try {
-      segments = await transcribeYouTube(url);
+      segments = await transcribeYouTube(url, ({ stage, percent }) => setStage(stage, percent));
     } catch (err) {
       jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: err.message });
       return;
@@ -170,6 +179,7 @@ async function runPipelineBackground(jobId, opts) {
   } else {
     let audioPath = uploadedPath;
     if (sourceType === 'drive') {
+      setStage('downloading', 0);
       try {
         audioPath = await ingestDrive(driveUrl);
       } catch (err) {
@@ -177,8 +187,9 @@ async function runPipelineBackground(jobId, opts) {
         return;
       }
     }
+    setStage('transcribing', 0);
     try {
-      segments = await transcribeAudio(audioPath);
+      segments = await transcribeAudio(audioPath, ({ stage, percent }) => setStage(stage, percent));
     } catch (err) {
       fs.unlink(audioPath, () => {});
       jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Transcription failed: ${err.message}` });
@@ -186,6 +197,8 @@ async function runPipelineBackground(jobId, opts) {
     }
     fs.unlink(audioPath, () => {});
   }
+
+  setStage('detecting', null);
 
   let candidates;
   try {

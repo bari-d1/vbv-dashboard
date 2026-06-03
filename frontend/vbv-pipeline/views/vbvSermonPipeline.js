@@ -40,14 +40,39 @@ function sermonRenderPending(jobId, queuePosition) {
     </div>`;
 }
 
-function sermonRenderProcessing(jobId) {
+function sermonRenderProcessing(jobId, stage, percent) {
+  let title, body;
+  if (stage === 'downloading') {
+    title = 'Downloading audio';
+    body = `
+      <p class="sermon-status-text">Fetching audio from YouTube…</p>
+      <div class="sermon-loading-bar" style="margin-top:20px;"></div>`;
+  } else if (stage === 'transcribing') {
+    const pct = typeof percent === 'number' ? percent : 0;
+    title = 'Transcribing sermon';
+    body = `
+      <p class="sermon-status-text">Converting speech to text — ${pct}% complete</p>
+      <div class="sermon-progress-wrap">
+        <div class="sermon-progress-bar" style="width:${pct}%"></div>
+      </div>`;
+  } else if (stage === 'detecting') {
+    title = 'Detecting candidates';
+    body = `
+      <p class="sermon-status-text">Analysing transcript for the strongest clip moments…</p>
+      <div class="sermon-loading-bar" style="margin-top:20px;"></div>`;
+  } else {
+    title = 'Processing';
+    body = `
+      <p class="sermon-status-text">This usually takes 10–20 minutes depending on sermon length.</p>
+      <div class="sermon-loading-bar" style="margin-top:20px;"></div>`;
+  }
+
   return `
     <div class="vbv-card sermon-status-card" id="sermon-status-view">
       <div class="sermon-status-icon sermon-status-icon-processing">${_ICON_PROCESSING}</div>
-      <p class="sermon-status-title">Transcribing sermon</p>
-      <p class="sermon-status-text">This usually takes 10–15 minutes depending on sermon length.</p>
-      <p class="sermon-status-note">The transcription server will keep running even if you close this tab.</p>
-      <div class="sermon-loading-bar" style="margin-top:24px;"></div>
+      <p class="sermon-status-title">${title}</p>
+      ${body}
+      <p class="sermon-status-note" style="margin-top:16px;">The server keeps running even if you close this tab.</p>
       <p class="sermon-job-id">Job ID: ${escapeHtml(jobId)}</p>
       <div class="sermon-status-actions">
         <button class="sermon-new-job-link" id="sermon-new-job">Start a new job</button>
@@ -323,7 +348,7 @@ function sermonShowStatus(status, data) {
   let html = '<h1>Clipping Tool</h1>';
   switch (status) {
     case 'pending':    html += sermonRenderPending(data.jobId, data.queuePosition); break;
-    case 'processing': html += sermonRenderProcessing(data.jobId); break;
+    case 'processing': html += sermonRenderProcessing(data.jobId, data.stage, data.percent); break;
     case 'complete':   html += sermonRenderComplete(data.jobId, data.sessionId); break;
     case 'failed':     html += sermonRenderFailed(data.jobId, data.error); break;
     default:           html += sermonRenderPending(data.jobId, null);
