@@ -3,7 +3,7 @@ services:
     name: vbv-dashboard
     env: node
     rootDir: backend
-    buildCommand: npm install && npx prisma generate && npx prisma db push --accept-data-loss
+    buildCommand: curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod +x /usr/local/bin/yt-dlp && npm install && npx prisma generate && npx prisma db push --accept-data-loss
     startCommand: node server.js
     envVars:
       - key: DATABASE_URL
