@@ -50,12 +50,10 @@ function ingestYoutube(url) {
     if (process.env.YT_COOKIES && !fs.existsSync(cookiesPath)) {
       fs.writeFileSync(cookiesPath, process.env.YT_COOKIES);
     }
-    const cookiesExist = fs.existsSync(cookiesPath);
-    console.log(`[yt-dlp] cookies file present: ${cookiesExist}, YT_COOKIES env set: ${!!process.env.YT_COOKIES}`);
-    const cookiesArgs = cookiesExist ? ['--cookies', cookiesPath] : [];
+    const cookiesArgs = fs.existsSync(cookiesPath) ? ['--cookies', cookiesPath] : [];
     const ytdlp = spawn('yt-dlp', [
       '-f', 'bestaudio[ext=m4a]/bestaudio',
-      '--no-playlist', '--js-runtimes', 'node',
+      '--no-playlist', '--js-runtimes', `node:${process.execPath}`,
       ...cookiesArgs,
       '-o', outputTemplate, url,
     ]);
