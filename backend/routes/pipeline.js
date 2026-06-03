@@ -1,5 +1,4 @@
 const express = require('express');
-const { spawn } = require('child_process');
 const { google } = require('googleapis');
 const multer = require('multer');
 const { randomUUID } = require('crypto');
@@ -26,55 +25,6 @@ function ensureDir(dir) {
 }
 
 // ── Ingestion ───────────────────────────────────────────────────────────────
-
-function ytdlpFriendlyError(stderr) {
-  const s = stderr.toLowerCase();
-  if (s.includes('sign in') || s.includes('not a bot') || s.includes('confirm your age') || s.includes('cookies')) {
-    return 'YouTube is blocking the download — your cookies have expired or are missing. Re-export your YouTube cookies from Chrome and update the YT_COOKIES environment variable in Render, then redeploy.';
-  }
-  if (s.includes('video unavailable') || s.includes('private video')) {
-    return 'This YouTube video is unavailable or private.';
-  }
-  if (s.includes('no such format') || s.includes('requested format')) {
-    return 'Could not find a downloadable audio format for this video.';
-  }
-  return stderr.trim() || 'yt-dlp failed';
-}
-
-function ingestYoutube(url) {
-  return new Promise((resolve, reject) => {
-    ensureDir(AUDIO_DIR);
-    const baseName = `yt-${randomUUID()}`;
-    const outputTemplate = path.join(AUDIO_DIR, `${baseName}.%(ext)s`);
-    const cookiesPath = '/tmp/yt-cookies.txt';
-    if (process.env.YT_COOKIES && !fs.existsSync(cookiesPath)) {
-      fs.writeFileSync(cookiesPath, process.env.YT_COOKIES);
-    }
-    const cookiesArgs = fs.existsSync(cookiesPath) ? ['--cookies', cookiesPath] : [];
-    const ytdlp = spawn('yt-dlp', [
-      '-f', 'bestaudio[ext=m4a]/bestaudio',
-      '--no-playlist', '--js-runtimes', `node:${process.execPath}`,
-      ...cookiesArgs,
-      '-o', outputTemplate, url,
-    ]);
-    let stderr = '';
-    ytdlp.stderr.on('data', (c) => { stderr += c; });
-    ytdlp.on('error', (err) => {
-      reject(err.code === 'ENOENT'
-        ? new Error('yt-dlp is not installed on this server.')
-        : err);
-    });
-    ytdlp.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(ytdlpFriendlyError(stderr)));
-        return;
-      }
-      const files = fs.readdirSync(AUDIO_DIR).filter(f => f.startsWith(baseName));
-      if (!files.length) { reject(new Error('yt-dlp finished but output file was not found.')); return; }
-      resolve(path.join(AUDIO_DIR, files[0]));
-    });
-  });
-}
 
 function extractDriveFileId(driveUrl) {
   for (const re of [/\/file\/d\/([a-zA-Z0-9_-]+)/, /[?&]id=([a-zA-Z0-9_-]+)/, /\/open\?id=([a-zA-Z0-9_-]+)/]) {
@@ -155,6 +105,30 @@ async function transcribeAudio(audioPath) {
   return pollForResult(submitData.jobId);
 }
 
+async function transcribeYouTube(url) {
+  if (!process.env.VBV_API_KEY) throw new Error('VBV_API_KEY environment variable is not set');
+
+  const form = new FormData();
+  form.append('youtube_url', url);
+
+  let submitData;
+  try {
+    const response = await axios.post(HETZNER_URL, form, {
+      headers: { ...form.getHeaders(), 'X-API-Key': process.env.VBV_API_KEY },
+    });
+    submitData = response.data;
+  } catch (err) {
+    const message = err.response?.data?.error || err.message;
+    throw new Error(`Transcription server error: ${message}`);
+  }
+
+  if (!submitData.success || !submitData.jobId) {
+    throw new Error(submitData.error || 'Failed to queue transcription job');
+  }
+
+  return pollForResult(submitData.jobId);
+}
+
 // ── Candidate session save ──────────────────────────────────────────────────
 
 function saveCandidates({ sourceType, sourceReference, churchName, sermonTitle, platformTargets, candidates }) {
@@ -181,29 +155,37 @@ function saveCandidates({ sourceType, sourceReference, churchName, sermonTitle, 
 
 async function runPipelineBackground(jobId, opts) {
   const { sourceType, url, driveUrl, audioPath: uploadedPath, churchName, sermonTitle, platformTargets, sourceReference } = opts;
-  let audioPath = uploadedPath;
-
-  if (sourceType !== 'upload') {
-    try {
-      if (sourceType === 'youtube') audioPath = await ingestYoutube(url);
-      else if (sourceType === 'drive') audioPath = await ingestDrive(driveUrl);
-    } catch (err) {
-      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Ingestion failed: ${err.message}` });
-      return;
-    }
-  }
 
   jobs.set(jobId, { ...jobs.get(jobId), status: 'processing' });
 
   let segments;
-  try {
-    segments = await transcribeAudio(audioPath);
-  } catch (err) {
+
+  if (sourceType === 'youtube') {
+    try {
+      segments = await transcribeYouTube(url);
+    } catch (err) {
+      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: err.message });
+      return;
+    }
+  } else {
+    let audioPath = uploadedPath;
+    if (sourceType === 'drive') {
+      try {
+        audioPath = await ingestDrive(driveUrl);
+      } catch (err) {
+        jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Ingestion failed: ${err.message}` });
+        return;
+      }
+    }
+    try {
+      segments = await transcribeAudio(audioPath);
+    } catch (err) {
+      fs.unlink(audioPath, () => {});
+      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Transcription failed: ${err.message}` });
+      return;
+    }
     fs.unlink(audioPath, () => {});
-    jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Transcription failed: ${err.message}` });
-    return;
   }
-  fs.unlink(audioPath, () => {});
 
   let candidates;
   try {
