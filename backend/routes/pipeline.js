@@ -27,23 +27,40 @@ function ensureDir(dir) {
 
 // ── Ingestion ───────────────────────────────────────────────────────────────
 
+function ytdlpFriendlyError(stderr) {
+  const s = stderr.toLowerCase();
+  if (s.includes('sign in') || s.includes('not a bot') || s.includes('confirm your age') || s.includes('cookies')) {
+    return 'YouTube is blocking the download — your cookies have expired or are missing. Re-export your YouTube cookies from Chrome and update the YT_COOKIES environment variable in Render, then redeploy.';
+  }
+  if (s.includes('video unavailable') || s.includes('private video')) {
+    return 'This YouTube video is unavailable or private.';
+  }
+  if (s.includes('no such format') || s.includes('requested format')) {
+    return 'Could not find a downloadable audio format for this video.';
+  }
+  return stderr.trim() || 'yt-dlp failed';
+}
+
 function ingestYoutube(url) {
   return new Promise((resolve, reject) => {
     ensureDir(AUDIO_DIR);
     const outputPath = path.join(AUDIO_DIR, `yt-${randomUUID()}.mp3`);
+    const cookiesArgs = fs.existsSync('/tmp/yt-cookies.txt') ? ['--cookies', '/tmp/yt-cookies.txt'] : [];
     const ytdlp = spawn('yt-dlp', [
       '--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0',
-      '--no-playlist', '-o', outputPath, url,
+      '--no-playlist', '--js-runtimes', 'node',
+      ...cookiesArgs,
+      '-o', outputPath, url,
     ]);
     let stderr = '';
     ytdlp.stderr.on('data', (c) => { stderr += c; });
     ytdlp.on('error', (err) => {
       reject(err.code === 'ENOENT'
-        ? new Error('yt-dlp is not installed. Install with: brew install yt-dlp')
+        ? new Error('yt-dlp is not installed on this server.')
         : err);
     });
     ytdlp.on('close', (code) => {
-      if (code !== 0) reject(new Error(stderr.trim() || 'yt-dlp failed'));
+      if (code !== 0) reject(new Error(ytdlpFriendlyError(stderr)));
       else resolve(outputPath);
     });
   });
