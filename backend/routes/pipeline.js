@@ -59,7 +59,7 @@ async function ingestDrive(driveUrl) {
 
 // ── Transcription ───────────────────────────────────────────────────────────
 
-async function pollForResult(hetznerJobId) {
+async function pollForResult(hetznerJobId, onProgress) {
   const apiKey = process.env.VBV_API_KEY;
 
   while (true) {
