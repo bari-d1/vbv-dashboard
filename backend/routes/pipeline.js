@@ -44,13 +44,14 @@ function ytdlpFriendlyError(stderr) {
 function ingestYoutube(url) {
   return new Promise((resolve, reject) => {
     ensureDir(AUDIO_DIR);
-    const outputPath = path.join(AUDIO_DIR, `yt-${randomUUID()}.mp3`);
+    const baseName = `yt-${randomUUID()}`;
+    const outputTemplate = path.join(AUDIO_DIR, `${baseName}.%(ext)s`);
     const cookiesArgs = fs.existsSync('/tmp/yt-cookies.txt') ? ['--cookies', '/tmp/yt-cookies.txt'] : [];
     const ytdlp = spawn('yt-dlp', [
-      '--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0',
+      '-f', 'bestaudio[ext=m4a]/bestaudio',
       '--no-playlist', '--js-runtimes', 'node',
       ...cookiesArgs,
-      '-o', outputPath, url,
+      '-o', outputTemplate, url,
     ]);
     let stderr = '';
     ytdlp.stderr.on('data', (c) => { stderr += c; });
@@ -60,8 +61,13 @@ function ingestYoutube(url) {
         : err);
     });
     ytdlp.on('close', (code) => {
-      if (code !== 0) reject(new Error(ytdlpFriendlyError(stderr)));
-      else resolve(outputPath);
+      if (code !== 0) {
+        reject(new Error(ytdlpFriendlyError(stderr)));
+        return;
+      }
+      const files = fs.readdirSync(AUDIO_DIR).filter(f => f.startsWith(baseName));
+      if (!files.length) { reject(new Error('yt-dlp finished but output file was not found.')); return; }
+      resolve(path.join(AUDIO_DIR, files[0]));
     });
   });
 }
