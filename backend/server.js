@@ -33,11 +33,6 @@ const PORT = process.env.PORT || 3001;
 
 app.set('trust proxy', 1);
 
-// Write YouTube cookies from env var so yt-dlp can bypass bot detection
-if (process.env.YT_COOKIES) {
-  const fs = require('fs');
-  fs.writeFileSync('/tmp/yt-cookies.txt', process.env.YT_COOKIES);
-}
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 

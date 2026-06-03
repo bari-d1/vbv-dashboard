@@ -46,7 +46,11 @@ function ingestYoutube(url) {
     ensureDir(AUDIO_DIR);
     const baseName = `yt-${randomUUID()}`;
     const outputTemplate = path.join(AUDIO_DIR, `${baseName}.%(ext)s`);
-    const cookiesArgs = fs.existsSync('/tmp/yt-cookies.txt') ? ['--cookies', '/tmp/yt-cookies.txt'] : [];
+    const cookiesPath = '/tmp/yt-cookies.txt';
+    if (process.env.YT_COOKIES && !fs.existsSync(cookiesPath)) {
+      fs.writeFileSync(cookiesPath, process.env.YT_COOKIES);
+    }
+    const cookiesArgs = fs.existsSync(cookiesPath) ? ['--cookies', cookiesPath] : [];
     const ytdlp = spawn('yt-dlp', [
       '-f', 'bestaudio[ext=m4a]/bestaudio',
       '--no-playlist', '--js-runtimes', 'node',
