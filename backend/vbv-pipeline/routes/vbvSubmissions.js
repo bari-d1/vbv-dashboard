@@ -2,6 +2,7 @@ const router = require('express').Router();
 const prisma = require('../../db');
 const auth = require('../middleware/vbvAuthMiddleware');
 const role = require('../middleware/vbvRoleMiddleware');
+const { sendSubmissionEmail } = require('../services/vbvEmailService');
 
 // POST /vbv/submissions/:jobId — editor submits an edit
 router.post('/:jobId', auth, role('editor', 'lead_editor'), async (req, res) => {
@@ -27,6 +28,9 @@ router.post('/:jobId', auth, role('editor', 'lead_editor'), async (req, res) => 
   await prisma.vbvActivityLog.create({
     data: { actorId: req.vbvUser.userId, actionType: 'job_submitted', detail: `Submitted edit for: ${job.title}` },
   });
+
+  const leadEditors = await prisma.vbvUser.findMany({ where: { role: 'lead_editor' }, select: { email: true } });
+  sendSubmissionEmail({ jobTitle: job.title, editorName: req.vbvUser.name, leadEditors }).catch(() => {});
 
   res.status(201).json(submission);
 });

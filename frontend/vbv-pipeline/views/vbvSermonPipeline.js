@@ -36,6 +36,7 @@ function sermonRenderPending(jobId, queuePosition) {
       <p class="sermon-job-id">Job ID: ${escapeHtml(jobId)}</p>
       <div class="sermon-status-actions">
         <button class="sermon-new-job-link" id="sermon-new-job">Start a new job</button>
+        <button class="sermon-stop-btn" id="sermon-stop-job">Stop job</button>
       </div>
     </div>`;
 }
@@ -76,6 +77,7 @@ function sermonRenderProcessing(jobId, stage, percent) {
       <p class="sermon-job-id">Job ID: ${escapeHtml(jobId)}</p>
       <div class="sermon-status-actions">
         <button class="sermon-new-job-link" id="sermon-new-job">Start a new job</button>
+        <button class="sermon-stop-btn" id="sermon-stop-job">Stop job</button>
       </div>
     </div>`;
 }
@@ -128,6 +130,7 @@ const _QUEUE_STATUS = {
   processing: { dot: '#3b82f6', label: 'Processing' },
   complete:   { dot: '#10b981', label: 'Complete' },
   failed:     { dot: '#e20415', label: 'Failed' },
+  cancelled:  { dot: '#9ca3af', label: 'Cancelled' },
 };
 
 function sermonRenderQueueSection(jobs) {
@@ -351,6 +354,7 @@ function sermonShowStatus(status, data) {
     case 'processing': html += sermonRenderProcessing(data.jobId, data.stage, data.percent); break;
     case 'complete':   html += sermonRenderComplete(data.jobId, data.sessionId); break;
     case 'failed':     html += sermonRenderFailed(data.jobId, data.error); break;
+    case 'cancelled':  html += sermonRenderFailed(data.jobId, 'Job was stopped.'); break;
     default:           html += sermonRenderPending(data.jobId, null);
   }
   html += sermonRenderQueueSection([]);
@@ -364,6 +368,19 @@ function sermonBindStatusButtons(status, data) {
   if (newJobBtn) {
     newJobBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      sermonClearJob();
+      vbvNavigate('sermon-pipeline');
+    });
+  }
+
+  const stopBtn = document.getElementById('sermon-stop-job');
+  if (stopBtn) {
+    stopBtn.addEventListener('click', async () => {
+      stopBtn.disabled = true;
+      stopBtn.textContent = 'Stopping…';
+      try {
+        await fetch(`/api/pipeline/${data.jobId}`, { method: 'DELETE' });
+      } catch { /* ignore */ }
       sermonClearJob();
       vbvNavigate('sermon-pipeline');
     });
@@ -445,7 +462,7 @@ async function sermonPollOnce(jobId) {
     return;
   }
 
-  if (data.status === 'complete' || data.status === 'failed') {
+  if (data.status === 'complete' || data.status === 'failed' || data.status === 'cancelled') {
     sermonStopPolling();
     localStorage.removeItem(SERMON_JOB_KEY);
     if (data.status === 'complete') sermonNotifyComplete(data.sessionId);

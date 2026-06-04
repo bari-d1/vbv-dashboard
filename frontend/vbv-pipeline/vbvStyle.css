@@ -242,6 +242,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .sermon-status-actions { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 24px; }
 .sermon-new-job-link { font-size: 0.82rem; color: var(--text-muted); text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; }
 .sermon-new-job-link:hover { color: var(--text); }
+.sermon-stop-btn { font-size: 0.82rem; color: #e20415; background: none; border: 1px solid #e20415; border-radius: 6px; padding: 6px 16px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.sermon-stop-btn:hover:not(:disabled) { background: #e20415; color: #fff; }
+.sermon-stop-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .sermon-countdown-text { color: var(--text-muted); font-size: 0.82rem; margin-top: 4px; }
 
 /* Progress bar */

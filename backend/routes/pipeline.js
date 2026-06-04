@@ -15,6 +15,7 @@ const CANDIDATES_DIR = path.resolve(__dirname, '../../data/candidates');
 const CREDENTIALS_PATH = path.resolve(__dirname, '../../credentials/google-drive.json');
 const HETZNER_URL = 'http://5.78.235.93:5000/transcribe';
 const HETZNER_STATUS_URL = 'http://5.78.235.93:5000/status';
+const HETZNER_CANCEL_URL = 'http://5.78.235.93:5000/cancel';
 const ALLOWED_EXTS = ['.mp3', '.mp4', '.wav', '.m4a', '.mov'];
 
 // In-memory job store — survives requests, cleared on server restart
@@ -59,10 +60,12 @@ async function ingestDrive(driveUrl) {
 
 // ── Transcription ───────────────────────────────────────────────────────────
 
-async function pollForResult(hetznerJobId, onProgress) {
+async function pollForResult(hetznerJobId, onProgress, localJobId) {
   const apiKey = process.env.VBV_API_KEY;
 
   while (true) {
+    if (localJobId && jobs.get(localJobId)?.status === 'cancelled') return null;
+
     let statusData;
     try {
       const res = await axios.get(`${HETZNER_STATUS_URL}/${hetznerJobId}`, {
@@ -86,7 +89,7 @@ async function pollForResult(hetznerJobId, onProgress) {
   }
 }
 
-async function transcribeAudio(audioPath, onProgress) {
+async function transcribeAudio(audioPath, onProgress, localJobId) {
   if (!process.env.VBV_API_KEY) throw new Error('VBV_API_KEY environment variable is not set');
 
   const form = new FormData();
@@ -107,10 +110,15 @@ async function transcribeAudio(audioPath, onProgress) {
     throw new Error(submitData.error || 'Failed to queue transcription job');
   }
 
-  return pollForResult(submitData.jobId, onProgress);
+  if (localJobId) {
+    const existing = jobs.get(localJobId);
+    if (existing) jobs.set(localJobId, { ...existing, hetznerJobId: submitData.jobId });
+  }
+
+  return pollForResult(submitData.jobId, onProgress, localJobId);
 }
 
-async function transcribeYouTube(url, onProgress) {
+async function transcribeYouTube(url, onProgress, localJobId) {
   if (!process.env.VBV_API_KEY) throw new Error('VBV_API_KEY environment variable is not set');
 
   const form = new FormData();
@@ -131,7 +139,12 @@ async function transcribeYouTube(url, onProgress) {
     throw new Error(submitData.error || 'Failed to queue transcription job');
   }
 
-  return pollForResult(submitData.jobId, onProgress);
+  if (localJobId) {
+    const existing = jobs.get(localJobId);
+    if (existing) jobs.set(localJobId, { ...existing, hetznerJobId: submitData.jobId });
+  }
+
+  return pollForResult(submitData.jobId, onProgress, localJobId);
 }
 
 // ── Candidate session save ──────────────────────────────────────────────────
@@ -171,11 +184,12 @@ async function runPipelineBackground(jobId, opts) {
   if (sourceType === 'youtube') {
     setStage('downloading', 0);
     try {
-      segments = await transcribeYouTube(url, ({ stage, percent }) => setStage(stage, percent));
+      segments = await transcribeYouTube(url, ({ stage, percent }) => setStage(stage, percent), jobId);
     } catch (err) {
       jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: err.message });
       return;
     }
+    if (segments === null) return; // cancelled
   } else {
     let audioPath = uploadedPath;
     if (sourceType === 'drive') {
@@ -189,15 +203,17 @@ async function runPipelineBackground(jobId, opts) {
     }
     setStage('transcribing', 0);
     try {
-      segments = await transcribeAudio(audioPath, ({ stage, percent }) => setStage(stage, percent));
+      segments = await transcribeAudio(audioPath, ({ stage, percent }) => setStage(stage, percent), jobId);
     } catch (err) {
       fs.unlink(audioPath, () => {});
       jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Transcription failed: ${err.message}` });
       return;
     }
     fs.unlink(audioPath, () => {});
+    if (segments === null) return; // cancelled
   }
 
+  if (jobs.get(jobId)?.status === 'cancelled') return;
   setStage('detecting', null);
 
   let candidates;
@@ -207,6 +223,8 @@ async function runPipelineBackground(jobId, opts) {
     jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Analysis failed: ${err.message}` });
     return;
   }
+
+  if (jobs.get(jobId)?.status === 'cancelled') return;
 
   let sessionId;
   try {
@@ -299,6 +317,27 @@ router.post('/', upload.single('audioFile'), (req, res) => {
   });
 
   res.status(202).json({ success: true, jobId, status: 'pending' });
+});
+
+// ── Route: cancel ───────────────────────────────────────────────────────────
+
+router.delete('/:jobId', async (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+  if (job.status === 'complete' || job.status === 'failed') {
+    return res.status(400).json({ success: false, error: `Job already ${job.status}` });
+  }
+
+  jobs.set(req.params.jobId, { ...job, status: 'cancelled' });
+
+  if (job.hetznerJobId) {
+    axios.post(`${HETZNER_CANCEL_URL}/${job.hetznerJobId}`, {}, {
+      headers: { 'X-API-Key': process.env.VBV_API_KEY },
+      timeout: 5000,
+    }).catch(() => {});
+  }
+
+  res.json({ success: true });
 });
 
 module.exports = router;

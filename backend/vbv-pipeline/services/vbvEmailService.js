@@ -70,6 +70,23 @@ async function sendAssignmentEmail({ editorEmail, editorName, jobTitle, assigned
   });
 }
 
+async function sendSubmissionEmail({ jobTitle, editorName, leadEditors }) {
+  const dashboardUrl = process.env.VBV_DASHBOARD_URL || 'http://localhost:3001/vbv-pipeline/vbv.html';
+  const recipients = leadEditors.map(le => le.email).filter(Boolean);
+  if (!recipients.length) return;
+  await getClient().emails.send({
+    from: process.env.EMAIL_FROM,
+    to: recipients,
+    subject: `Edit ready for review: ${jobTitle}`,
+    html: `
+      <h2>New submission ready for review</h2>
+      <p><strong>${editorName}</strong> has submitted an edit for <strong>${jobTitle}</strong>.</p>
+      <p>Please log in to review it.</p>
+      <p><a href="${dashboardUrl}">Open Dashboard</a></p>
+    `,
+  });
+}
+
 async function sendSmApprovalEmail({ jobTitle, editor, leadEditors }) {
   const dashboardUrl = process.env.VBV_DASHBOARD_URL || 'http://localhost:3001/vbv-pipeline/vbv.html';
   const allRecipients = [editor?.email, ...leadEditors.map(le => le.email)].filter(Boolean);
@@ -86,4 +103,4 @@ async function sendSmApprovalEmail({ jobTitle, editor, leadEditors }) {
   });
 }
 
-module.exports = { sendWelcomeEmail, sendAssignmentEmail, sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail };
+module.exports = { sendWelcomeEmail, sendAssignmentEmail, sendSubmissionEmail, sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail };
