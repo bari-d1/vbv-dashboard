@@ -584,8 +584,16 @@ function vbvBindSermonPipeline() {
   // Submit handlers
   document.getElementById('sermon-run-youtube')?.addEventListener('click', async () => {
     if (!sermonValidateSharedFields()) return;
-    const url = document.getElementById('sermon-yt-url').value.trim();
+    let url = document.getElementById('sermon-yt-url').value.trim();
     if (!url) return sermonShowFormError('Please enter a YouTube URL.');
+
+    // Convert /live/VIDEO_ID to /watch?v=VIDEO_ID
+    const liveMatch = url.match(/youtube\.com\/live\/([a-zA-Z0-9_-]+)/);
+    if (liveMatch) {
+      url = `https://www.youtube.com/watch?v=${liveMatch[1]}`;
+      document.getElementById('sermon-yt-url').value = url;
+    }
+
     await sermonHandleSubmit('youtube', { url });
   });
 
