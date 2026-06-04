@@ -462,6 +462,42 @@ router.post('/:id/sm-send-back', auth, role('social_media', 'vedits', 'admin'), 
   res.json({ success: true });
 });
 
+// PATCH /vbv/jobs/:id — creator or admin can edit a job while it is still open or assigned
+router.patch('/:id', auth, role('admin', 'lead_editor', 'social_media', 'vedits'), async (req, res) => {
+  const job = await prisma.vbvJob.findUnique({ where: { id: req.params.id } });
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+
+  const { role: userRole, userId } = req.vbvUser;
+  if (userRole !== 'admin' && job.createdById !== userId) {
+    return res.status(403).json({ error: 'Only the creator or an admin can edit this brief' });
+  }
+  if (!['open', 'assigned'].includes(job.status)) {
+    return res.status(400).json({ error: `Cannot edit a brief with status "${job.status}"` });
+  }
+
+  const { title, artistName, sourceDriveLink, startTimestamp, endTimestamp, clipNotes, platformTargets, deadline } = req.body;
+
+  const updated = await prisma.vbvJob.update({
+    where: { id: req.params.id },
+    data: {
+      ...(title            !== undefined && { title }),
+      ...(artistName       !== undefined && { artistName }),
+      ...(sourceDriveLink  !== undefined && { sourceDriveLink }),
+      ...(startTimestamp   !== undefined && { startTimestamp: startTimestamp || null }),
+      ...(endTimestamp     !== undefined && { endTimestamp: endTimestamp || null }),
+      ...(clipNotes        !== undefined && { clipNotes: clipNotes || null }),
+      ...(platformTargets  !== undefined && { platformTargets }),
+      ...(deadline         !== undefined && { deadline: new Date(deadline) }),
+    },
+  });
+
+  await prisma.vbvActivityLog.create({
+    data: { actorId: userId, actionType: 'job_edited', detail: `Edited brief: ${updated.title}` },
+  }).catch(() => {});
+
+  res.json(updated);
+});
+
 // DELETE /vbv/jobs/:id — admin, lead_editor, social_media, vedits can delete a job
 router.delete('/:id', auth, role('admin', 'lead_editor', 'social_media', 'vedits'), async (req, res) => {
   const job = await prisma.vbvJob.findUnique({ where: { id: req.params.id } });
