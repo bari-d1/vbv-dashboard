@@ -17,12 +17,84 @@ const HETZNER_URL = 'http://5.78.235.93:5000/transcribe';
 const HETZNER_STATUS_URL = 'http://5.78.235.93:5000/status';
 const HETZNER_CANCEL_URL = 'http://5.78.235.93:5000/cancel';
 const ALLOWED_EXTS = ['.mp3', '.mp4', '.wav', '.m4a', '.mov'];
+const RAPIDAPI_HOST = 'youtube-media-downloader.p.rapidapi.com';
 
 // In-memory job store — survives requests, cleared on server restart
 const jobs = new Map();
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+// ── YouTube transcript (RapidAPI) ───────────────────────────────────────────
+
+function extractVideoId(url) {
+  for (const re of [
+    /[?&]v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /\/embed\/([a-zA-Z0-9_-]{11})/,
+    /\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ]) {
+    const m = url.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function vttTimeToSeconds(t) {
+  const parts = t.split(':');
+  const secs = parseFloat(parts[parts.length - 1]);
+  const mins = parseInt(parts[parts.length - 2]) || 0;
+  const hrs = parseInt(parts[parts.length - 3]) || 0;
+  return hrs * 3600 + mins * 60 + secs;
+}
+
+function parseVTT(vttText) {
+  const segments = [];
+  const lines = vttText.trim().split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    if (lines[i].includes('-->')) {
+      const parts = lines[i].split('-->');
+      const start = vttTimeToSeconds(parts[0].trim());
+      const end = vttTimeToSeconds(parts[1].trim());
+      i++;
+      const textLines = [];
+      while (i < lines.length && lines[i].trim() !== '' && !lines[i].match(/^\d+$/) && !lines[i].includes('-->')) {
+        textLines.push(lines[i].trim());
+        i++;
+      }
+      const text = textLines.join(' ').replace(/^>>\s*/g, '').trim();
+      if (text) segments.push({ start, end, text });
+    } else {
+      i++;
+    }
+  }
+  return segments;
+}
+
+async function getYouTubeTranscript(url) {
+  const videoId = extractVideoId(url);
+  if (!videoId) throw new Error('Could not extract video ID from URL');
+
+  const apiKey = process.env.RAPIDAPI_KEY;
+  if (!apiKey) throw new Error('RAPIDAPI_KEY environment variable is not set');
+
+  const detailsRes = await axios.get(`https://${RAPIDAPI_HOST}/v2/video/details?videoId=${videoId}`, {
+    headers: { 'x-rapidapi-host': RAPIDAPI_HOST, 'x-rapidapi-key': apiKey },
+  });
+
+  const subtitleItems = detailsRes.data?.subtitles?.items;
+  if (!subtitleItems || subtitleItems.length === 0) return null;
+
+  const track = subtitleItems.find(s => s.code === 'en') || subtitleItems[0];
+
+  const subtitleRes = await axios.get(`https://${RAPIDAPI_HOST}/v2/video/subtitles`, {
+    params: { subtitleUrl: track.url },
+    headers: { 'x-rapidapi-host': RAPIDAPI_HOST, 'x-rapidapi-key': apiKey },
+  });
+
+  return parseVTT(subtitleRes.data);
 }
 
 // ── Ingestion ───────────────────────────────────────────────────────────────
@@ -181,7 +253,19 @@ async function runPipelineBackground(jobId, opts) {
 
   let segments;
 
-  if (sourceType === 'youtube') {
+  if (sourceType === 'youtube_transcript') {
+    setStage('fetching_transcript', 0);
+    try {
+      segments = await getYouTubeTranscript(url);
+    } catch (err) {
+      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: err.message });
+      return;
+    }
+    if (!segments || segments.length === 0) {
+      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: 'No captions available for this video. Try the standard pipeline instead.' });
+      return;
+    }
+  } else if (sourceType === 'youtube') {
     setStage('downloading', 0);
     try {
       segments = await transcribeYouTube(url, ({ stage, percent }) => setStage(stage, percent), jobId);
@@ -276,7 +360,7 @@ router.post('/', upload.single('audioFile'), (req, res) => {
   let uploadedPath = null;
   let sourceReference = '';
 
-  if (sourceType === 'youtube') {
+  if (sourceType === 'youtube' || sourceType === 'youtube_transcript') {
     if (!url) return res.status(400).json({ success: false, error: 'url is required for sourceType=youtube' });
     sourceReference = url;
   } else if (sourceType === 'drive') {
@@ -287,7 +371,7 @@ router.post('/', upload.single('audioFile'), (req, res) => {
     uploadedPath = req.file.path;
     sourceReference = req.file.originalname;
   } else {
-    return res.status(400).json({ success: false, error: `Unknown sourceType: ${sourceType}` });
+    return res.status(400).json({ success: false, error: `Unknown sourceType: ${sourceType}. Allowed: youtube, youtube_transcript, drive, upload` });
   }
 
   const jobId = randomUUID();

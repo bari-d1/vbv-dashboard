@@ -61,6 +61,11 @@ function sermonRenderProcessing(jobId, stage, percent) {
     body = `
       <p class="sermon-status-text">Analysing transcript for the strongest clip moments…</p>
       <div class="sermon-loading-bar" style="margin-top:20px;"></div>`;
+  } else if (stage === 'fetching_transcript') {
+    title = 'Fetching transcript';
+    body = `
+      <p class="sermon-status-text">Retrieving captions from YouTube…</p>
+      <div class="sermon-loading-bar" style="margin-top:20px;"></div>`;
   } else {
     title = 'Processing';
     body = `
@@ -582,19 +587,21 @@ function vbvBindSermonPipeline() {
   });
 
   // Submit handlers
-  document.getElementById('sermon-run-youtube')?.addEventListener('click', async () => {
-    if (!sermonValidateSharedFields()) return;
+  function getYouTubeUrl() {
     let url = document.getElementById('sermon-yt-url').value.trim();
-    if (!url) return sermonShowFormError('Please enter a YouTube URL.');
-
-    // Convert /live/VIDEO_ID to /watch?v=VIDEO_ID
     const liveMatch = url.match(/youtube\.com\/live\/([a-zA-Z0-9_-]+)/);
     if (liveMatch) {
       url = `https://www.youtube.com/watch?v=${liveMatch[1]}`;
       document.getElementById('sermon-yt-url').value = url;
     }
+    return url;
+  }
 
-    await sermonHandleSubmit('youtube', { url });
+  document.getElementById('sermon-run-youtube')?.addEventListener('click', async () => {
+    if (!sermonValidateSharedFields()) return;
+    const url = getYouTubeUrl();
+    if (!url) return sermonShowFormError('Please enter a YouTube URL.');
+    await sermonHandleSubmit('youtube_transcript', { url });
   });
 
   document.getElementById('sermon-run-drive')?.addEventListener('click', async () => {
