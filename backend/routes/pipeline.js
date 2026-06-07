@@ -80,19 +80,37 @@ async function getYouTubeTranscript(url) {
   const apiKey = process.env.RAPIDAPI_KEY;
   if (!apiKey) throw new Error('RAPIDAPI_KEY environment variable is not set');
 
-  const detailsRes = await axios.get(`https://${RAPIDAPI_HOST}/v2/video/details?videoId=${videoId}`, {
-    headers: { 'x-rapidapi-host': RAPIDAPI_HOST, 'x-rapidapi-key': apiKey },
-  });
+  let detailsRes;
+  try {
+    detailsRes = await axios.get(`https://${RAPIDAPI_HOST}/v2/video/details?videoId=${videoId}`, {
+      headers: { 'x-rapidapi-host': RAPIDAPI_HOST, 'x-rapidapi-key': apiKey },
+      timeout: 15000,
+    });
+  } catch (err) {
+    const status = err.response?.status;
+    if (status === 403) throw new Error('Transcript service: access denied — check RAPIDAPI_KEY and subscription');
+    if (status === 429) throw new Error('Transcript service: rate limit reached — try again shortly');
+    if (err.code === 'ECONNABORTED' || status === 504 || status === 502) throw new Error('Transcript service is temporarily unavailable — try again in a few minutes');
+    throw new Error(`Transcript service error: ${err.message}`);
+  }
 
   const subtitleItems = detailsRes.data?.subtitles?.items;
   if (!subtitleItems || subtitleItems.length === 0) return null;
 
   const track = subtitleItems.find(s => s.code === 'en') || subtitleItems[0];
 
-  const subtitleRes = await axios.get(`https://${RAPIDAPI_HOST}/v2/video/subtitles`, {
-    params: { subtitleUrl: track.url },
-    headers: { 'x-rapidapi-host': RAPIDAPI_HOST, 'x-rapidapi-key': apiKey },
-  });
+  let subtitleRes;
+  try {
+    subtitleRes = await axios.get(`https://${RAPIDAPI_HOST}/v2/video/subtitles`, {
+      params: { subtitleUrl: track.url },
+      headers: { 'x-rapidapi-host': RAPIDAPI_HOST, 'x-rapidapi-key': apiKey },
+      timeout: 15000,
+    });
+  } catch (err) {
+    const status = err.response?.status;
+    if (err.code === 'ECONNABORTED' || status === 504 || status === 502) throw new Error('Transcript service is temporarily unavailable — try again in a few minutes');
+    throw new Error(`Transcript fetch error: ${err.message}`);
+  }
 
   return parseVTT(subtitleRes.data);
 }
