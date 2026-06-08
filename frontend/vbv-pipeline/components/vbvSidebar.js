@@ -9,6 +9,9 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'for-review', label: 'For Review' },
       { view: 'lead-editor-dashboard', label: 'Assign & Review' },
       { view: 'sermon-pipeline', label: 'Clipping Tool' },
+      { view: 'outreach', label: 'Outreach' },
+      { view: 'templates', label: 'Templates' },
+      { view: 'clients', label: 'Clients' },
     ],
     social_media: [
       { view: 'social-dashboard', label: 'Create Brief' },
@@ -31,6 +34,9 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'vedits-jobs', label: 'All Vedits Jobs' },
       { view: 'for-review', label: 'Review Queue' },
       { view: 'sermon-pipeline', label: 'Clipping Tool' },
+      { view: 'outreach', label: 'Outreach' },
+      { view: 'templates', label: 'Templates' },
+      { view: 'clients', label: 'Clients' },
     ],
   };
   const items = navItems[user.role] || [];
@@ -40,14 +46,15 @@ function vbvRenderSidebar(user, activeView) {
     items.push({ view: 'sermon-pipeline', label: 'Clipping Tool' });
   }
 
-  const links = items.map(item =>
-    `<a href="#" class="${activeView === item.view ? 'active' : ''}" data-view="${item.view}"><span>${item.label}</span></a>`
-  ).join('');
+  const links = items.map(item => {
+    const isActive = activeView === item.view || activeView.startsWith(`${item.view}-`);
+    return `<a href="#" class="${isActive ? 'active' : ''}" data-view="${item.view}"><span>${item.label}</span></a>`;
+  }).join('');
 
   return `
     <aside class="vbv-sidebar">
       <button class="vbv-sidebar-close" id="vbv-sidebar-close" aria-label="Close menu">&times;</button>
-      <div class="vbv-logo">VBV <span>Pipeline</span></div>
+      <div class="vbv-logo"><img src="/assets/verse-by-verse-logo-red.png" alt="Verse by Verse" class="vbv-logo-img"> <span>Pipeline</span></div>
       <nav>${links}</nav>
       <div class="vbv-user-info">
         <strong>${escapeHtml(user.name)}</strong>

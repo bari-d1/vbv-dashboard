@@ -197,3 +197,78 @@ model VbvActivityLog {
   createdAt  DateTime @default(now())
   actor      VbvUser  @relation(fields: [actorId], references: [id])
 }
+
+// ── VBV Outreach / CRM ─────────────────────────────────────────────────────
+
+model VbvLead {
+  id         String        @id @default(cuid())
+  churchName String
+  email      String        @unique
+  driveLink  String?
+  status     VbvLeadStatus
+  emailLogs  VbvEmailLog[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+enum VbvLeadStatus {
+  CONTACTED
+  REPLIED
+  BOOKED_CALL
+  CONVERTED
+  NO_RESPONSE
+}
+
+model VbvEmailLog {
+  id              String            @id @default(cuid())
+  direction       VbvEmailDirection
+  subject         String?
+  body            String
+  sentAt          DateTime
+  gmailMessageId  String?           @unique
+  leadId          String?
+  clientId        String?
+  lead            VbvLead?          @relation(fields: [leadId], references: [id])
+  client          VbvClient?        @relation(fields: [clientId], references: [id])
+  createdAt       DateTime          @default(now())
+}
+
+enum VbvEmailDirection {
+  SENT
+  RECEIVED
+}
+
+model VbvTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  bodyHtml  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VbvClient {
+  id         String          @id @default(cuid())
+  churchName String
+  email      String          @unique
+  tier       VbvClientTier
+  startDate  DateTime?
+  notes      String?
+  status     VbvClientStatus
+  leadId     String?
+  emailLogs  VbvEmailLog[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+enum VbvClientTier {
+  TIER_1
+  TIER_2
+  TIER_3
+}
+
+enum VbvClientStatus {
+  ACTIVE
+  PAUSED
+  CHURNED
+}

@@ -20,6 +20,10 @@ const detectRoutes = require('./routes/detect');
 const pipelineRoutes = require('./routes/pipeline');
 const candidatesRoutes = require('./routes/candidates');
 const briefsRoutes = require('./routes/briefs');
+// Template Management — first deploy must run `node scripts/seedTemplates.js` once to insert
+// the default 'VBV Edits Outreach' template (it's a no-op if any templates already exist).
+const templatesRoutes = require('./routes/templates');
+const clientsRoutes = require('./routes/clients');
 
 // VBV Pipeline routes
 const vbvAuthRoutes = require('./vbv-pipeline/routes/vbvAuth');
@@ -27,6 +31,9 @@ const vbvUsersRoutes = require('./vbv-pipeline/routes/vbvUsers');
 const vbvJobsRoutes = require('./vbv-pipeline/routes/vbvJobs');
 const vbvSubmissionsRoutes = require('./vbv-pipeline/routes/vbvSubmissions');
 const vbvLogsRoutes = require('./vbv-pipeline/routes/vbvLogs');
+const vbvLeadsRoutes = require('./vbv-pipeline/routes/vbvLeads');
+
+const { startGmailPoller } = require('./services/gmailPoller');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -106,6 +113,8 @@ app.use('/api/detect', detectRoutes);
 app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/candidates', candidatesRoutes);
 app.use('/api/briefs', briefsRoutes);
+app.use('/api/templates', templatesRoutes);
+app.use('/api/clients', clientsRoutes);
 
 // VBV Pipeline
 app.use('/vbv/auth', vbvAuthRoutes);
@@ -113,6 +122,7 @@ app.use('/vbv/users', vbvUsersRoutes);
 app.use('/vbv/jobs', vbvJobsRoutes);
 app.use('/vbv/submissions', vbvSubmissionsRoutes);
 app.use('/vbv/logs', vbvLogsRoutes);
+app.use('/vbv/leads', vbvLeadsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -154,4 +164,6 @@ app.listen(PORT, () => {
   console.log(`Instagram: ${process.env.INSTAGRAM_ACCESS_TOKEN ? 'configured' : 'demo mode'}`);
   console.log(`TikTok:    ${process.env.TIKTOK_ACCESS_TOKEN ? 'configured' : 'demo mode'}`);
   console.log(`YouTube:   ${process.env.YOUTUBE_API_KEY ? 'configured' : 'demo mode'}\n`);
+
+  startGmailPoller();
 });

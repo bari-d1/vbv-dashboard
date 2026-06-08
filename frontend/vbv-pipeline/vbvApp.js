@@ -77,6 +77,18 @@ async function vbvNavigate(view) {
         html = await vbvRenderLeadEditorDashboard(); break;
       case 'sermon-pipeline':
         html = vbvRenderSermonPipeline(); break;
+      case 'outreach':
+        html = await vbvRenderOutreachLeads(); break;
+      case 'outreach-lead-detail':
+        html = await vbvRenderOutreachLeadDetail(); break;
+      case 'templates':
+        html = await vbvRenderTemplatesList(); break;
+      case 'template-edit':
+        html = await vbvRenderTemplateEdit(); break;
+      case 'clients':
+        html = await vbvRenderClientsList(); break;
+      case 'client-detail':
+        html = await vbvRenderClientDetail(); break;
       default:
         html = '<div class="vbv-empty">View not found.</div>';
     }
@@ -100,6 +112,12 @@ async function vbvNavigate(view) {
     case 'vedits-jobs':           vbvBindVeditsJobs(); break;
     case 'lead-editor-dashboard': vbvBindLeadEditorDashboard(); break;
     case 'sermon-pipeline': vbvBindSermonPipeline(); break;
+    case 'outreach': vbvBindOutreachLeads(); break;
+    case 'outreach-lead-detail': vbvBindOutreachLeadDetail(); break;
+    case 'templates': vbvBindTemplatesList(); break;
+    case 'template-edit': vbvBindTemplateEdit(); break;
+    case 'clients': vbvBindClientsList(); break;
+    case 'client-detail': vbvBindClientDetail(); break;
   }
 }
 
