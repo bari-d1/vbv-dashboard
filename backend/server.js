@@ -34,6 +34,7 @@ const vbvLogsRoutes = require('./vbv-pipeline/routes/vbvLogs');
 const vbvLeadsRoutes = require('./vbv-pipeline/routes/vbvLeads');
 
 const { startGmailPoller } = require('./services/gmailPoller');
+const { runAutoAssignment } = require('./vbv-pipeline/services/vbvJobAssignment');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -166,4 +167,5 @@ app.listen(PORT, () => {
   console.log(`YouTube:   ${process.env.YOUTUBE_API_KEY ? 'configured' : 'demo mode'}\n`);
 
   startGmailPoller();
+  runAutoAssignment().catch(e => console.error('Auto-assignment error:', e.message));
 });

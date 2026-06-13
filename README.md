@@ -139,3 +139,31 @@ If credentials are missing for a platform, that platform returns **realistic dem
 | `YOUTUBE_CHANNEL_ID` | For live YT data | YouTube channel ID (UC...) |
 | `PORT` | No (default: 3001) | Server port |
 | `CACHE_TTL_SECONDS` | No (default: 1800) | Cache duration in seconds |
+
+---
+
+## VBV Job Pool — Auto-Assignment
+
+Jobs in the `open` / unassigned pool are automatically handed out via `runAutoAssignment()`
+(`backend/vbv-pipeline/services/vbvJobAssignment.js`). It picks the oldest open job, randomly
+selects an `editor` who is below the 5-active-job cap, and assigns it (status → `in_progress`).
+
+Triggers: job creation, SM approval (`sm-approve`, which frees the assignee's slot), lead
+reassign (`reassign`, which frees the previous assignee's slot), and once on server startup
+(drains any backlog). `lead_editor`s are not part of auto-assignment and can still manually
+claim from the pool via the "Claim Job" button.
+
+### Known race conditions (not yet addressed)
+
+- **No cap check on `/assign` or `/reassign`**: unlike `/claim`, these manual lead/admin
+  endpoints don't verify the target editor is below the 5-job cap, so a lead can manually push
+  an editor over the limit.
+- **TOCTOU gap in `runAutoAssignment`**: the "editor has < 5 active jobs" check and the job
+  assignment write are separate queries, not wrapped in one transaction. If two assignment
+  events fire close together (e.g. two `runAutoAssignment` runs, or a run overlapping with a
+  manual `/assign`/`/reassign`), both could see the same editor as "eligible" and assign to
+  them before either write commits — potentially pushing that editor over the 5-job cap.
+
+These are considered low-probability given current team size/usage, but should be revisited
+(e.g. re-check the count inside the same transaction as the assignment write, or add the cap
+check to `/assign`/`/reassign`) if they start causing real overload issues.
