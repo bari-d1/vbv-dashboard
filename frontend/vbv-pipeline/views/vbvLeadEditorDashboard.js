@@ -101,14 +101,18 @@ async function vbvRenderLeadEditorDashboard() {
 
   // ── Completed (read-only) ──────────────────────────────────────────────
   const completedRows = completed.length
-    ? completed.map(j => `
+    ? completed.map(j => {
+        const sub = j.submissions?.[0];
+        return `
         <tr>
           <td>${escapeHtml(j.title)}</td>
           <td>${escapeHtml(j.artistName)}</td>
           <td>${escapeHtml(j.assignedTo?.name || '—')}</td>
           <td>${vbvStatusBadge('sm_approved')}</td>
-        </tr>`).join('')
-    : '<tr><td colspan="4"><div class="vbv-empty">No completed jobs yet.</div></td></tr>';
+          <td>${sub ? `<a href="${escapeHtml(sub.driveLink)}" target="_blank" rel="noopener">Open Video</a>` : '—'}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="5"><div class="vbv-empty">No completed jobs yet.</div></td></tr>';
 
   return `
     <h1>Lead Editor</h1>
@@ -150,7 +154,7 @@ async function vbvRenderLeadEditorDashboard() {
       <h2>Completed</h2>
       <div class="vbv-table-wrap">
         <table class="vbv-table">
-          <thead><tr><th>Title</th><th>Artist</th><th>Editor</th><th>Status</th></tr></thead>
+          <thead><tr><th>Title</th><th>Artist</th><th>Editor</th><th>Status</th><th>Video</th></tr></thead>
           <tbody>${completedRows}</tbody>
         </table>
       </div>

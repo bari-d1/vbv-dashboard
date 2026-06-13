@@ -3,6 +3,7 @@ const prisma = require('../../db');
 const auth = require('../middleware/vbvAuthMiddleware');
 const role = require('../middleware/vbvRoleMiddleware');
 const { sendAssignmentEmail, sendReviewNotification, sendSmCorrectionEmail, sendSmApprovalEmail } = require('../services/vbvEmailService');
+const { runAutoAssignment } = require('../services/vbvJobAssignment');
 
 const ACTIVE_STATUSES = ['assigned', 'in_progress', 'submitted', 'sent_back_by_lead', 'lead_approved', 'sent_back_by_sm'];
 
@@ -34,6 +35,8 @@ router.post('/', auth, role('social_media', 'lead_editor', 'admin', 'vedits'), a
   await prisma.vbvActivityLog.create({
     data: { actorId: req.vbvUser.userId, actionType: 'job_created', detail: `Created job: ${title}` },
   });
+
+  await runAutoAssignment();
 
   res.status(201).json(job);
 });
@@ -148,6 +151,7 @@ router.get('/completed', auth, role('lead_editor', 'admin'), async (req, res) =>
     include: {
       assignedTo: { select: { name: true } },
       createdBy: { select: { name: true } },
+      submissions: { orderBy: { submittedAt: 'desc' }, take: 1 },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -252,6 +256,9 @@ router.post('/:id/reassign', auth, role('lead_editor', 'admin'), async (req, res
       assignedBy: assigner.name,
     });
   } catch (e) { console.error('Email error:', e.message); }
+
+  // Reassigning away frees a slot for the previous editor — give them a pool job if one's waiting.
+  await runAutoAssignment();
 
   res.json(updated);
 });
@@ -404,6 +411,8 @@ router.post('/:id/sm-approve', auth, role('social_media', 'vedits', 'admin'), as
       leadEditors,
     });
   } catch (e) { console.error('Email error:', e.message); }
+
+  await runAutoAssignment();
 
   res.json({ success: true });
 });

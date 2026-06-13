@@ -5,7 +5,7 @@ async function vbvRenderJobPool() {
 
   try {
     jobs = await vbvApi('GET', '/vbv/jobs/pool');
-    if (user.role === 'editor' || user.role === 'lead_editor') {
+    if (user.role === 'lead_editor') {
       const mine = await vbvApi('GET', '/vbv/jobs/assigned');
       const active = mine.filter(j => ['in_progress','submitted'].includes(j.status));
       atCap = active.length >= 5;
@@ -17,7 +17,7 @@ async function vbvRenderJobPool() {
   }
 
   const cards = jobs.map(job => {
-    const claimBtn = (user.role === 'editor' || user.role === 'lead_editor')
+    const claimBtn = (user.role === 'lead_editor')
       ? `<button class="vbv-btn vbv-btn-primary vbv-btn-sm vbv-claim-btn" data-job-id="${job.id}" ${atCap ? 'disabled' : ''}>
            ${atCap ? 'At 5-job cap' : 'Claim Job'}
          </button>`
