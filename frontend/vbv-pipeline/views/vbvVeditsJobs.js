@@ -13,7 +13,7 @@ async function vbvRenderVeditsJobs() {
       <td>${escapeHtml(j.createdBy?.name || '—')}</td>
       <td>${j.assignedTo ? escapeHtml(j.assignedTo.name) : '<span style="color:var(--text-muted)">Unassigned</span>'}</td>
       <td>${vbvStatusBadge(j.status)}</td>
-      <td>${new Date(j.deadline).toLocaleDateString('en-GB')}</td>
+      <td>${vbvFormatDeadline(j.deadline)}</td>
       <td style="display:flex;gap:6px;">
         ${canEdit(j.status) ? `<button class="vbv-btn vbv-btn-secondary vbv-btn-sm vbv-edit-job-btn" data-job='${JSON.stringify(j)}'>Edit</button>` : ''}
         <button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-job-btn" data-job-id="${j.id}" data-job-title="${escapeHtml(j.title)}">Delete</button>
@@ -52,7 +52,6 @@ async function vbvRenderVeditsJobs() {
             <label><input type="checkbox" name="vbv-edit-platform" value="YouTube"> YouTube</label>
           </div>
         </div>
-        <div class="vbv-form-group"><label>Deadline *</label><input type="date" id="vbv-edit-deadline"></div>
         <div id="vbv-edit-error" class="vbv-alert vbv-alert-error" style="display:none;margin-bottom:12px;"></div>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
           <button class="vbv-btn vbv-btn-secondary" id="vbv-edit-cancel">Cancel</button>
@@ -74,7 +73,6 @@ function vbvBindVeditsJobs() {
     document.getElementById('vbv-edit-start').value = job.startTimestamp || '';
     document.getElementById('vbv-edit-end').value = job.endTimestamp || '';
     document.getElementById('vbv-edit-clipnotes').value = job.clipNotes || '';
-    document.getElementById('vbv-edit-deadline').value = job.deadline ? job.deadline.split('T')[0] : '';
     document.querySelectorAll('input[name="vbv-edit-platform"]').forEach(cb => {
       cb.checked = (job.platformTargets || []).includes(cb.value);
     });
@@ -113,7 +111,6 @@ function vbvBindVeditsJobs() {
         endTimestamp:    document.getElementById('vbv-edit-end').value || null,
         clipNotes:       document.getElementById('vbv-edit-clipnotes').value || null,
         platformTargets: platforms,
-        deadline:        document.getElementById('vbv-edit-deadline').value,
       });
       modal.style.display = 'none';
       vbvNavigate('vedits-jobs');

@@ -29,3 +29,9 @@ function vbvRenderTimeline(logs) {
 function escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// Jobs have no deadline until they're assigned to an editor
+function vbvFormatDeadline(deadline) {
+  if (!deadline) return '—';
+  return new Date(deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}

@@ -6,13 +6,15 @@ const { sendAssignmentEmail, sendReviewNotification, sendSmCorrectionEmail, send
 const { runAutoAssignment } = require('../services/vbvJobAssignment');
 
 const ACTIVE_STATUSES = ['assigned', 'in_progress', 'submitted', 'sent_back_by_lead', 'lead_approved', 'sent_back_by_sm'];
+const DEADLINE_DAYS = 5;
+const deadlineFromNow = () => new Date(Date.now() + DEADLINE_DAYS * 86400000);
 
 // POST /vbv/jobs — social_media, lead_editor, admin or vedits creates a job
 router.post('/', auth, role('social_media', 'lead_editor', 'admin', 'vedits'), async (req, res) => {
   const { title, artistName, briefType, sourceDriveLink, startTimestamp, endTimestamp,
-          clipNotes, editInstructions, platformTargets, deadline } = req.body;
+          clipNotes, editInstructions, platformTargets } = req.body;
 
-  if (!title || !artistName || !briefType || !sourceDriveLink || !platformTargets?.length || !deadline) {
+  if (!title || !artistName || !briefType || !sourceDriveLink || !platformTargets?.length) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -24,7 +26,6 @@ router.post('/', auth, role('social_media', 'lead_editor', 'admin', 'vedits'), a
       clipNotes: clipNotes || null,
       editInstructions: editInstructions || null,
       platformTargets,
-      deadline: new Date(deadline),
       createdById: req.vbvUser.userId,
     },
   });
@@ -174,7 +175,7 @@ router.post('/:id/claim', auth, role('editor', 'lead_editor'), async (req, res) 
 
   const updated = await prisma.vbvJob.update({
     where: { id: req.params.id },
-    data: { assignedToId: req.vbvUser.userId, status: 'in_progress', claimedAt: new Date() },
+    data: { assignedToId: req.vbvUser.userId, status: 'in_progress', claimedAt: new Date(), deadline: deadlineFromNow() },
   });
 
   await prisma.vbvTimelineLog.create({
@@ -199,7 +200,7 @@ router.post('/:id/assign', auth, role('lead_editor', 'admin'), async (req, res) 
 
   const updated = await prisma.vbvJob.update({
     where: { id: req.params.id },
-    data: { assignedToId: editorId, status: 'assigned', claimedAt: new Date() },
+    data: { assignedToId: editorId, status: 'assigned', claimedAt: new Date(), deadline: deadlineFromNow() },
   });
 
   await prisma.vbvTimelineLog.create({
@@ -238,7 +239,7 @@ router.post('/:id/reassign', auth, role('lead_editor', 'admin'), async (req, res
 
   const updated = await prisma.vbvJob.update({
     where: { id: req.params.id },
-    data: { assignedToId: editorId, status: 'assigned', claimedAt: new Date() },
+    data: { assignedToId: editorId, status: 'assigned', claimedAt: new Date(), deadline: deadlineFromNow() },
   });
 
   await prisma.vbvTimelineLog.create({
@@ -471,34 +472,49 @@ router.post('/:id/sm-send-back', auth, role('social_media', 'vedits', 'admin'), 
   res.json({ success: true });
 });
 
-// PATCH /vbv/jobs/:id — creator or admin can edit a job while it is still open or assigned
+// PATCH /vbv/jobs/:id — creator/admin can edit brief details; lead_editor/admin can edit the deadline
 router.patch('/:id', auth, role('admin', 'lead_editor', 'social_media', 'vedits'), async (req, res) => {
   const job = await prisma.vbvJob.findUnique({ where: { id: req.params.id } });
   if (!job) return res.status(404).json({ error: 'Job not found' });
 
   const { role: userRole, userId } = req.vbvUser;
-  if (userRole !== 'admin' && job.createdById !== userId) {
-    return res.status(403).json({ error: 'Only the creator or an admin can edit this brief' });
-  }
-  if (!['open', 'assigned'].includes(job.status)) {
-    return res.status(400).json({ error: `Cannot edit a brief with status "${job.status}"` });
-  }
-
   const { title, artistName, sourceDriveLink, startTimestamp, endTimestamp, clipNotes, platformTargets, deadline } = req.body;
 
-  const updated = await prisma.vbvJob.update({
-    where: { id: req.params.id },
-    data: {
-      ...(title            !== undefined && { title }),
-      ...(artistName       !== undefined && { artistName }),
-      ...(sourceDriveLink  !== undefined && { sourceDriveLink }),
-      ...(startTimestamp   !== undefined && { startTimestamp: startTimestamp || null }),
-      ...(endTimestamp     !== undefined && { endTimestamp: endTimestamp || null }),
-      ...(clipNotes        !== undefined && { clipNotes: clipNotes || null }),
-      ...(platformTargets  !== undefined && { platformTargets }),
-      ...(deadline         !== undefined && { deadline: new Date(deadline) }),
-    },
-  });
+  const data = {};
+
+  if (deadline !== undefined) {
+    if (!['admin', 'lead_editor'].includes(userRole)) {
+      return res.status(403).json({ error: 'Only a lead editor or admin can edit the deadline' });
+    }
+    if (job.status === 'sm_approved') {
+      return res.status(400).json({ error: 'Cannot edit the deadline of a completed job' });
+    }
+    data.deadline = deadline ? new Date(deadline) : null;
+  }
+
+  const briefFields = { title, artistName, sourceDriveLink, startTimestamp, endTimestamp, clipNotes, platformTargets };
+  if (Object.values(briefFields).some(v => v !== undefined)) {
+    if (userRole !== 'admin' && job.createdById !== userId) {
+      return res.status(403).json({ error: 'Only the creator or an admin can edit this brief' });
+    }
+    if (!['open', 'assigned'].includes(job.status)) {
+      return res.status(400).json({ error: `Cannot edit a brief with status "${job.status}"` });
+    }
+
+    if (title            !== undefined) data.title = title;
+    if (artistName       !== undefined) data.artistName = artistName;
+    if (sourceDriveLink  !== undefined) data.sourceDriveLink = sourceDriveLink;
+    if (startTimestamp   !== undefined) data.startTimestamp = startTimestamp || null;
+    if (endTimestamp     !== undefined) data.endTimestamp = endTimestamp || null;
+    if (clipNotes        !== undefined) data.clipNotes = clipNotes || null;
+    if (platformTargets  !== undefined) data.platformTargets = platformTargets;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ error: 'No editable fields provided' });
+  }
+
+  const updated = await prisma.vbvJob.update({ where: { id: req.params.id }, data });
 
   await prisma.vbvActivityLog.create({
     data: { actorId: userId, actionType: 'job_edited', detail: `Edited brief: ${updated.title}` },

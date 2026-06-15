@@ -18,7 +18,7 @@ router.post('/vbv', vbvAuth, async (req, res) => {
   const {
     sessionId, candidateIndex,
     sourceReference, start, end, hook, payoff,
-    churchName, sermonTitle, platformTarget, deadline, notes,
+    churchName, sermonTitle, platformTarget, notes,
   } = req.body;
 
   // Validate required fields
@@ -32,7 +32,6 @@ router.post('/vbv', vbvAuth, async (req, res) => {
   if (!churchName?.trim())   missing.push('churchName');
   if (!sermonTitle?.trim())  missing.push('sermonTitle');
   if (!platformTarget?.length) missing.push('platformTarget');
-  if (!deadline)         missing.push('deadline');
   if (missing.length) {
     return res.status(400).json({ success: false, error: `Missing required fields: ${missing.join(', ')}` });
   }
@@ -68,7 +67,6 @@ router.post('/vbv', vbvAuth, async (req, res) => {
         endTimestamp: end,
         clipNotes,
         platformTargets: Array.isArray(platformTarget) ? platformTarget : [platformTarget],
-        deadline: new Date(deadline),
         createdById: req.vbvUser.userId,
       },
     });

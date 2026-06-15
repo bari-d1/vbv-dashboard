@@ -85,15 +85,6 @@
     document.getElementById('bf-hook').value = candidate.hook;
     document.getElementById('bf-payoff').value = candidate.payoff;
 
-    // Default deadline to 5 days from now; keep tomorrow as the minimum
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const fiveDays = new Date();
-    fiveDays.setDate(fiveDays.getDate() + 5);
-    const deadlineInput = document.getElementById('bf-deadline');
-    deadlineInput.min = tomorrow.toISOString().split('T')[0];
-    deadlineInput.value = fiveDays.toISOString().split('T')[0];
-
     // Pre-populate manual fields from session if collected during pipeline setup
     if (session.churchName)  document.getElementById('bf-church').value = session.churchName;
     if (session.sermonTitle) document.getElementById('bf-sermon-title').value = session.sermonTitle;
@@ -112,7 +103,6 @@
 
     const churchName = document.getElementById('bf-church').value.trim();
     const sermonTitle = document.getElementById('bf-sermon-title').value.trim();
-    const deadline = document.getElementById('bf-deadline').value;
     const notes = document.getElementById('bf-notes').value.trim();
     const platformCheckboxes = document.querySelectorAll('input[name="bf-platform"]:checked');
     const platformTarget = Array.from(platformCheckboxes).map(c => c.value);
@@ -120,7 +110,6 @@
     let valid = true;
     if (!churchName) { fieldError('bf-err-church', 'Church / speaker name is required.'); valid = false; }
     if (!sermonTitle) { fieldError('bf-err-sermon-title', 'Sermon title is required.'); valid = false; }
-    if (!deadline) { fieldError('bf-err-deadline', 'Deadline is required.'); valid = false; }
     if (!platformTarget.length) { fieldError('bf-err-platform', 'Select at least one platform.'); valid = false; }
     if (!valid) return;
 
@@ -146,7 +135,6 @@
           churchName,
           sermonTitle,
           platformTarget,
-          deadline,
           notes,
         }),
       });

@@ -30,7 +30,7 @@ async function vbvRenderAllJobs() {
         <td>${escapeHtml(j.createdBy?.name || '—')}</td>
         <td>${j.assignedTo ? escapeHtml(j.assignedTo.name) : '<span style="color:var(--text-muted)">Unassigned</span>'}</td>
         <td>${vbvStatusBadge(j.status)}</td>
-        <td>${new Date(j.deadline).toLocaleDateString('en-GB')}</td>
+        <td>${vbvFormatDeadline(j.deadline)}</td>
         <td>${reassignCell}</td>
         <td><button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-job-btn" data-job-id="${j.id}" data-job-title="${escapeHtml(j.title)}">Delete</button></td>
       </tr>`;

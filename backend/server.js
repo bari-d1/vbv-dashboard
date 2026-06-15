@@ -32,6 +32,7 @@ const vbvJobsRoutes = require('./vbv-pipeline/routes/vbvJobs');
 const vbvSubmissionsRoutes = require('./vbv-pipeline/routes/vbvSubmissions');
 const vbvLogsRoutes = require('./vbv-pipeline/routes/vbvLogs');
 const vbvLeadsRoutes = require('./vbv-pipeline/routes/vbvLeads');
+const vbvMonitorRoutes = require('./vbv-pipeline/routes/vbvMonitor');
 
 const { startGmailPoller } = require('./services/gmailPoller');
 const { runAutoAssignment } = require('./vbv-pipeline/services/vbvJobAssignment');
@@ -124,6 +125,7 @@ app.use('/vbv/jobs', vbvJobsRoutes);
 app.use('/vbv/submissions', vbvSubmissionsRoutes);
 app.use('/vbv/logs', vbvLogsRoutes);
 app.use('/vbv/leads', vbvLeadsRoutes);
+app.use('/vbv/monitor', vbvMonitorRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

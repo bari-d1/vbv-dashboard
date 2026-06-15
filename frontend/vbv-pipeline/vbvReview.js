@@ -16,12 +16,6 @@
     return localStorage.getItem('vbv_token') || '';
   }
 
-  function deadlineIn5Days() {
-    const d = new Date();
-    d.setDate(d.getDate() + 5);
-    return d.toISOString().split('T')[0];
-  }
-
   // True when session has all data needed for one-click briefing
   function canAutoBrief() {
     return !!(session?.churchName && session?.sermonTitle && session?.platformTargets?.length && getToken());
@@ -154,7 +148,6 @@
         churchName: session.churchName,
         sermonTitle: session.sermonTitle,
         platformTarget: session.platformTargets,
-        deadline: deadlineIn5Days(),
         notes: '',
       }),
     });

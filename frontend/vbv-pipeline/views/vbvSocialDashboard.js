@@ -52,10 +52,6 @@ async function vbvRenderSocialDashboard() {
             <label><input type="checkbox" name="platform" value="YouTube"> YouTube</label>
           </div>
         </div>
-        <div class="vbv-form-group">
-          <label>Deadline *</label>
-          <input type="date" id="vbv-brief-deadline" required>
-        </div>
         <button type="submit" class="vbv-btn vbv-btn-primary">Submit Brief</button>
       </form>
     </div>`;
@@ -70,7 +66,7 @@ async function vbvRenderMyBriefs() {
       <td>${escapeHtml(j.title)}</td>
       <td>${escapeHtml(j.artistName)}</td>
       <td>${vbvStatusBadge(j.briefType)}</td>
-      <td>${new Date(j.deadline).toLocaleDateString('en-GB')}</td>
+      <td>${vbvFormatDeadline(j.deadline)}</td>
       <td>${vbvStatusBadge(j.status)}</td>
       <td>${j.assignedTo?.name ? escapeHtml(j.assignedTo.name) : '—'}</td>
       <td><button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-brief-btn" data-job-id="${j.id}" data-job-title="${escapeHtml(j.title)}">Delete</button></td>
@@ -130,7 +126,6 @@ function vbvBindSocialDashboard() {
       briefType,
       sourceDriveLink: document.getElementById('vbv-brief-drive').value.trim(),
       platformTargets: platforms,
-      deadline: document.getElementById('vbv-brief-deadline').value,
     };
 
     if (briefType === 'timestamp_clip') {

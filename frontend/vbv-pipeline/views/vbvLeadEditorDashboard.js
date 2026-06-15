@@ -73,7 +73,12 @@ async function vbvRenderLeadEditorDashboard() {
           <td>${escapeHtml(j.artistName)}</td>
           <td>${escapeHtml(j.assignedTo?.name || '—')}</td>
           <td>${vbvStatusBadge(j.status)}</td>
-          <td>${new Date(j.deadline).toLocaleDateString('en-GB')}</td>
+          <td>
+            <div class="vbv-assign-row">
+              <input type="date" id="deadline-${j.id}" class="vbv-assign-sel" value="${j.deadline ? j.deadline.split('T')[0] : ''}">
+              <button class="vbv-btn vbv-btn-secondary vbv-btn-sm vbv-save-deadline-btn" data-job-id="${j.id}">Save</button>
+            </div>
+          </td>
           <td>
             <div class="vbv-assign-row">
               <select id="reassign-sel-${j.id}" class="vbv-assign-sel">
@@ -95,7 +100,7 @@ async function vbvRenderLeadEditorDashboard() {
           <td>${escapeHtml(j.artistName)}</td>
           <td>${escapeHtml(j.assignedTo?.name || '—')}</td>
           <td>${escapeHtml(j.createdBy?.name || '—')}</td>
-          <td>${new Date(j.deadline).toLocaleDateString('en-GB')}</td>
+          <td>${vbvFormatDeadline(j.deadline)}</td>
         </tr>`).join('')
     : '<tr><td colspan="5"><div class="vbv-empty">Nothing with Social Media right now.</div></td></tr>';
 
@@ -190,6 +195,23 @@ function vbvBindLeadEditorDashboard() {
       } catch(err) {
         if (msgEl) msgEl.innerHTML = `<div class="vbv-alert vbv-alert-error">${err.message}</div>`;
         btn.disabled = false; btn.textContent = 'Assign';
+      }
+    });
+  });
+
+  document.querySelectorAll('.vbv-save-deadline-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const jobId = btn.dataset.jobId;
+      const input = document.getElementById(`deadline-${jobId}`);
+      const msgEl = document.getElementById('vbv-reassign-msg');
+      if (!input?.value) { if (msgEl) msgEl.innerHTML = '<div class="vbv-alert vbv-alert-error">Pick a date first.</div>'; return; }
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        await vbvApi('PATCH', `/vbv/jobs/${jobId}`, { deadline: input.value });
+        vbvNavigate('lead-editor-dashboard');
+      } catch(err) {
+        if (msgEl) msgEl.innerHTML = `<div class="vbv-alert vbv-alert-error">${err.message}</div>`;
+        btn.disabled = false; btn.textContent = 'Save';
       }
     });
   });

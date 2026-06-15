@@ -14,7 +14,7 @@ async function vbvRenderForReview() {
   const cards = jobs.map(job => {
     const sub = job.submissions?.[0];
     const timeline = vbvRenderTimeline(job.timelineLogs || []);
-    const deadline = new Date(job.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const deadline = vbvFormatDeadline(job.deadline);
     const submittedDate = sub ? new Date(sub.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
     // Full brief details for comparison

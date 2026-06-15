@@ -1,5 +1,5 @@
 function vbvJobCardHTML(job, opts = {}) {
-  const deadline = new Date(job.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const deadline = vbvFormatDeadline(job.deadline);
   const platforms = Array.isArray(job.platformTargets) ? job.platformTargets.join(', ') : '';
   const detailsId = `details-${job.id}`;
 

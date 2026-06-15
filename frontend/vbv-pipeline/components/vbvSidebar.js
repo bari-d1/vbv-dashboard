@@ -8,6 +8,7 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'my-briefs', label: 'My Briefs' },
       { view: 'for-review', label: 'For Review' },
       { view: 'lead-editor-dashboard', label: 'Assign & Review' },
+      { view: 'monitor', label: 'Monitor' },
       { view: 'sermon-pipeline', label: 'Clipping Tool' },
       { view: 'outreach', label: 'Outreach' },
       { view: 'templates', label: 'Templates' },
@@ -28,6 +29,7 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'job-pool', label: 'Job Pool' },
       { view: 'editor-dashboard', label: 'My Jobs' },
       { view: 'lead-editor-dashboard', label: 'Review Queue' },
+      { view: 'monitor', label: 'Monitor' },
     ],
     vedits: [
       { view: 'vedits-create-brief', label: 'Create Brief' },

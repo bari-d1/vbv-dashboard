@@ -300,6 +300,77 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;
 }
 
+/* ── Monitor ── */
+.vbv-monitor-layout { display: grid; grid-template-columns: 200px 320px 1fr; gap: 20px; align-items: start; }
+.vbv-monitor-col { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.vbv-monitor-col h2 { font-size: 0.95rem; margin-bottom: 12px; }
+
+.vbv-monitor-editor-list { display: flex; flex-direction: column; gap: 6px; }
+.vbv-monitor-editor-btn {
+  text-align: left; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 0.85rem; color: var(--text);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.vbv-monitor-editor-btn:hover { background: var(--bg); }
+.vbv-monitor-editor-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.vbv-monitor-joblist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; flex-wrap: wrap; }
+.vbv-monitor-toggle { font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.vbv-monitor-toggle input { width: auto; }
+.vbv-monitor-job-entries { display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow-y: auto; }
+.vbv-monitor-job-entry { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.vbv-monitor-job-entry:hover { background: var(--bg); }
+.vbv-monitor-job-entry.selected { border-color: var(--accent); background: var(--status-sent-back-bg); }
+.vbv-monitor-job-title { font-weight: 600; font-size: 0.88rem; margin-bottom: 4px; }
+.vbv-monitor-job-meta { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px; }
+.vbv-monitor-job-deadline { font-size: 0.78rem; color: var(--text-muted); }
+.vbv-monitor-job-deadline.overdue { color: var(--accent); font-weight: 600; }
+
+.vbv-monitor-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.vbv-monitor-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted); }
+.vbv-monitor-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+.vbv-monitor-calendar-header { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
+.vbv-monitor-cal-header-row, .vbv-monitor-editor-block { display: grid; grid-template-columns: 140px 1fr; gap: 8px; }
+.vbv-monitor-cal-header-row { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 4px; }
+.vbv-monitor-cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.vbv-monitor-cal-day-header { text-align: center; font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 0; }
+.vbv-monitor-cal-day-header.today { color: var(--accent); font-weight: 700; }
+
+.vbv-monitor-editor-block { border-bottom: 1px solid var(--border); padding: 10px 0; align-items: center; }
+.vbv-monitor-editor-block:last-child { border-bottom: none; }
+.vbv-monitor-editor-label { font-size: 0.85rem; font-weight: 600; }
+.vbv-monitor-editor-jobs { display: flex; flex-direction: column; gap: 6px; }
+.vbv-monitor-job-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; min-height: 28px; }
+.vbv-monitor-empty-row { min-height: 28px; }
+.vbv-monitor-job-bar {
+  position: relative; background: var(--status-in-progress-bg); border: 1px solid var(--status-in-progress);
+  color: var(--status-in-progress); border-radius: 6px; font-size: 0.72rem; padding: 4px 18px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+.vbv-monitor-job-bar:hover, .vbv-monitor-job-bar.selected { box-shadow: 0 0 0 2px var(--accent); }
+.vbv-monitor-job-bar.due-this-week { border-color: #f59e0b; background: var(--status-submitted-bg); color: #b45309; }
+.vbv-monitor-job-bar.overdue { border: 2px dashed var(--accent); background: var(--status-sent-back-bg); color: var(--accent-dark); }
+.vbv-monitor-job-bar.started-before-week { border-left: 3px dashed currentColor; padding-left: 16px; }
+.vbv-monitor-job-bar.started-before-week::before {
+  content: '\25C0'; position: absolute; left: 3px; top: 50%; transform: translateY(-50%); font-size: 0.6rem; z-index: 1;
+}
+.vbv-monitor-job-bar-title { position: relative; z-index: 1; }
+.vbv-monitor-marker {
+  position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: 0.85rem; z-index: 2;
+  pointer-events: none; line-height: 1;
+}
+
+@media (max-width: 1100px) {
+  .vbv-monitor-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .vbv-monitor-cal-header-row, .vbv-monitor-editor-block { grid-template-columns: 90px 1fr; }
+  .vbv-monitor-editor-label { font-size: 0.78rem; }
+  .vbv-monitor-cal-day-header { font-size: 0.65rem; }
+}
+
 /* ── Mobile header ── */
 .vbv-mobile-header { display: none; }
 

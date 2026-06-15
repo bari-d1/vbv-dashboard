@@ -37,10 +37,6 @@ async function vbvRenderVeditsBrief() {
             <label><input type="checkbox" name="vb-platform" value="YouTube"> YouTube</label>
           </div>
         </div>
-        <div class="vbv-form-group">
-          <label>Deadline *</label>
-          <input type="date" id="vb-deadline" required>
-        </div>
         <button type="submit" class="vbv-btn vbv-btn-primary">Submit Brief</button>
       </form>
     </div>`;
@@ -68,7 +64,6 @@ function vbvBindVeditsBrief() {
       endTimestamp:   document.getElementById('vb-end').value || null,
       clipNotes:      document.getElementById('vb-clipnotes').value || null,
       platformTargets: platforms,
-      deadline:       document.getElementById('vb-deadline').value,
     };
 
     const btn = form.querySelector('button[type="submit"]');

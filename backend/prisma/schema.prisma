@@ -120,7 +120,7 @@ model VbvJob {
   clipNotes        String?
   editInstructions String?
   platformTargets  String[]
-  deadline         DateTime
+  deadline         DateTime?
   status           VbvJobStatus    @default(open)
   createdById      String
   assignedToId     String?

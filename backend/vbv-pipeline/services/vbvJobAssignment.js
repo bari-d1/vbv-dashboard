@@ -2,6 +2,7 @@ const prisma = require('../../db');
 const { sendAssignmentEmail } = require('./vbvEmailService');
 
 const ACTIVE_STATUSES = ['assigned', 'in_progress', 'submitted', 'sent_back_by_lead', 'lead_approved', 'sent_back_by_sm'];
+const DEADLINE_DAYS = 5;
 
 // Pulls open/unassigned jobs from the pool (oldest first) and randomly hands
 // each one to an editor who is below the 5-job cap, until either the pool
@@ -29,7 +30,7 @@ async function runAutoAssignment() {
 
     const result = await prisma.vbvJob.updateMany({
       where: { id: job.id, status: 'open', assignedToId: null },
-      data: { assignedToId: editor.id, status: 'in_progress', claimedAt: new Date() },
+      data: { assignedToId: editor.id, status: 'in_progress', claimedAt: new Date(), deadline: new Date(Date.now() + DEADLINE_DAYS * 86400000) },
     });
     if (result.count === 0) continue;
 

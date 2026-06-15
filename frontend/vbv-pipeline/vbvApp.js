@@ -75,6 +75,8 @@ async function vbvNavigate(view) {
         html = await vbvRenderVeditsJobs(); break;
       case 'lead-editor-dashboard':
         html = await vbvRenderLeadEditorDashboard(); break;
+      case 'monitor':
+        html = await vbvRenderMonitor(); break;
       case 'sermon-pipeline':
         html = vbvRenderSermonPipeline(); break;
       case 'outreach':
@@ -111,6 +113,7 @@ async function vbvNavigate(view) {
     case 'vedits-create-brief':   vbvBindVeditsBrief(); break;
     case 'vedits-jobs':           vbvBindVeditsJobs(); break;
     case 'lead-editor-dashboard': vbvBindLeadEditorDashboard(); break;
+    case 'monitor': vbvBindMonitor(); break;
     case 'sermon-pipeline': vbvBindSermonPipeline(); break;
     case 'outreach': vbvBindOutreachLeads(); break;
     case 'outreach-lead-detail': vbvBindOutreachLeadDetail(); break;
