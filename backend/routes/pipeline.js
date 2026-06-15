@@ -7,12 +7,12 @@ const path = require('path');
 const FormData = require('form-data');
 const axios = require('axios');
 const { detectCandidates } = require('./detect');
+const { getDriveAuthClient } = require('../services/googleDriveAuth');
 
 const router = express.Router();
 
 const AUDIO_DIR = '/tmp/vbv-audio';
 const CANDIDATES_DIR = path.resolve(__dirname, '../../data/candidates');
-const CREDENTIALS_PATH = path.resolve(__dirname, '../../credentials/google-drive.json');
 const HETZNER_URL = 'http://5.78.235.93:5000/transcribe';
 const HETZNER_STATUS_URL = 'http://5.78.235.93:5000/status';
 const HETZNER_CANCEL_URL = 'http://5.78.235.93:5000/cancel';
@@ -128,11 +128,8 @@ function extractDriveFileId(driveUrl) {
 async function ingestDrive(driveUrl) {
   const fileId = extractDriveFileId(driveUrl);
   if (!fileId) throw new Error('Could not extract file ID from Drive URL');
-  if (!fs.existsSync(CREDENTIALS_PATH)) {
-    throw new Error(`Google Drive credentials not found. Place service account JSON at: ${CREDENTIALS_PATH}`);
-  }
   ensureDir(AUDIO_DIR);
-  const auth = new google.auth.GoogleAuth({ keyFile: CREDENTIALS_PATH, scopes: ['https://www.googleapis.com/auth/drive.readonly'] });
+  const auth = getDriveAuthClient();
   const drive = google.drive({ version: 'v3', auth });
   const meta = await drive.files.get({ fileId, fields: 'name' });
   const ext = path.extname(meta.data.name || '') || '.mp4';
