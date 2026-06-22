@@ -180,6 +180,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 /* ── Section header ── */
 .vbv-section { margin-bottom: 40px; }
 .vbv-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.vbv-section-count { font-size: 0.85rem; color: var(--text-muted); font-weight: normal; margin-left: 6px; }
+.vbv-section-body { display: none; }
+.vbv-section-body.open { display: block; }
 
 /* ── Loading / empty ── */
 .vbv-empty { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 0.9rem; }

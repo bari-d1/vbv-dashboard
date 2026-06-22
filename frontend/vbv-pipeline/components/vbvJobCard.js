@@ -53,3 +53,10 @@ function vbvToggleDetails(id, btn) {
   el.classList.toggle('open');
   btn.textContent = el.classList.contains('open') ? 'Details ▴' : 'Details ▾';
 }
+
+function vbvToggleSection(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? 'Hide ▴' : 'Show ▾';
+}

@@ -123,45 +123,70 @@ async function vbvRenderLeadEditorDashboard() {
     <h1>Lead Editor</h1>
 
     <div class="vbv-section">
-      <h2>Assign Jobs</h2>
+      <div class="vbv-section-header">
+        <h2 style="margin:0;">Assign Jobs <span class="vbv-section-count">(${pool.length} open)</span></h2>
+        <button class="vbv-btn vbv-btn-secondary vbv-btn-sm" onclick="vbvToggleSection('vbv-pool-list', this)">Show ▾</button>
+      </div>
       <div id="vbv-assign-msg"></div>
-      ${poolCards}
+      <div id="vbv-pool-list" class="vbv-section-body">
+        ${poolCards}
+      </div>
     </div>
 
     <div class="vbv-section">
-      <h2>Review Queue</h2>
+      <div class="vbv-section-header">
+        <h2 style="margin:0;">Review Queue <span class="vbv-section-count">(${queue.length} pending)</span></h2>
+        <button class="vbv-btn vbv-btn-secondary vbv-btn-sm" onclick="vbvToggleSection('vbv-queue-list', this)">Show ▾</button>
+      </div>
       <div id="vbv-review-msg"></div>
-      ${queueCards}
+      <div id="vbv-queue-list" class="vbv-section-body">
+        ${queueCards}
+      </div>
     </div>
 
     <div class="vbv-section">
-      <h2>Reassign Jobs</h2>
+      <div class="vbv-section-header">
+        <h2 style="margin:0;">Reassign Jobs <span class="vbv-section-count">(${reassignable.length} active)</span></h2>
+        <button class="vbv-btn vbv-btn-secondary vbv-btn-sm" onclick="vbvToggleSection('vbv-reassign-list', this)">Show ▾</button>
+      </div>
       <div id="vbv-reassign-msg"></div>
-      <div class="vbv-table-wrap">
-        <table class="vbv-table">
-          <thead><tr><th>Title</th><th>Artist</th><th>Current Editor</th><th>Status</th><th>Deadline</th><th>Reassign</th></tr></thead>
-          <tbody>${reassignRows}</tbody>
-        </table>
+      <div id="vbv-reassign-list" class="vbv-section-body">
+        <div class="vbv-table-wrap">
+          <table class="vbv-table">
+            <thead><tr><th>Title</th><th>Artist</th><th>Current Editor</th><th>Status</th><th>Deadline</th><th>Reassign</th></tr></thead>
+            <tbody>${reassignRows}</tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <div class="vbv-section">
-      <h2>In Social Media Review</h2>
-      <div class="vbv-table-wrap">
-        <table class="vbv-table">
-          <thead><tr><th>Title</th><th>Artist</th><th>Editor</th><th>Social Media</th><th>Deadline</th></tr></thead>
-          <tbody>${smReviewRows}</tbody>
-        </table>
+      <div class="vbv-section-header">
+        <h2 style="margin:0;">In Social Media Review <span class="vbv-section-count">(${inSmReview.length})</span></h2>
+        <button class="vbv-btn vbv-btn-secondary vbv-btn-sm" onclick="vbvToggleSection('vbv-sm-review-list', this)">Show ▾</button>
+      </div>
+      <div id="vbv-sm-review-list" class="vbv-section-body">
+        <div class="vbv-table-wrap">
+          <table class="vbv-table">
+            <thead><tr><th>Title</th><th>Artist</th><th>Editor</th><th>Social Media</th><th>Deadline</th></tr></thead>
+            <tbody>${smReviewRows}</tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <div class="vbv-section">
-      <h2>Completed</h2>
-      <div class="vbv-table-wrap">
-        <table class="vbv-table">
-          <thead><tr><th>Title</th><th>Artist</th><th>Editor</th><th>Status</th><th>Video</th></tr></thead>
-          <tbody>${completedRows}</tbody>
-        </table>
+      <div class="vbv-section-header">
+        <h2 style="margin:0;">Completed <span class="vbv-section-count">(${completed.length})</span></h2>
+        <button class="vbv-btn vbv-btn-secondary vbv-btn-sm" onclick="vbvToggleSection('vbv-completed-list', this)">Show ▾</button>
+      </div>
+      <div id="vbv-completed-list" class="vbv-section-body">
+        <div class="vbv-table-wrap">
+          <table class="vbv-table">
+            <thead><tr><th>Title</th><th>Artist</th><th>Editor</th><th>Status</th><th>Video</th></tr></thead>
+            <tbody>${completedRows}</tbody>
+          </table>
+        </div>
       </div>
     </div>`;
 }
