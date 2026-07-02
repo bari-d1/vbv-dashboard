@@ -10,6 +10,7 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'lead-editor-dashboard', label: 'Assign & Review' },
       { view: 'monitor', label: 'Monitor' },
       { view: 'sermon-pipeline', label: 'Clipping Tool' },
+      { view: 'generate-srt', label: 'Generate SRT' },
       { view: 'outreach', label: 'Outreach' },
       { view: 'templates', label: 'Templates' },
       { view: 'clients', label: 'Clients' },
@@ -22,6 +23,7 @@ function vbvRenderSidebar(user, activeView) {
     editor: [
       { view: 'job-pool', label: 'Job Pool' },
       { view: 'editor-dashboard', label: 'My Jobs' },
+      { view: 'generate-srt', label: 'Generate SRT' },
     ],
     lead_editor: [
       { view: 'social-dashboard', label: 'Create Brief' },
@@ -30,6 +32,7 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'editor-dashboard', label: 'My Jobs' },
       { view: 'lead-editor-dashboard', label: 'Review Queue' },
       { view: 'monitor', label: 'Monitor' },
+      { view: 'generate-srt', label: 'Generate SRT' },
     ],
     vedits: [
       { view: 'vedits-create-brief', label: 'Create Brief' },

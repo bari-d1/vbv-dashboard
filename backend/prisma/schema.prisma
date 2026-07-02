@@ -82,6 +82,7 @@ model VbvUser {
   role                 VbvRole
   isActive             Boolean            @default(true)
   sermonPipelineAccess Boolean            @default(false)
+  autoAssignEligible   Boolean            @default(true)
   createdAt            DateTime           @default(now())
   credential           VbvUserCredential?
   createdJobs          VbvJob[]           @relation("CreatedBy")

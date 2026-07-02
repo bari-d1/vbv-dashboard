@@ -66,31 +66,24 @@ async function vbvRenderLeadEditorDashboard() {
   // ── Active Jobs (reassign) ─────────────────────────────────────────────
   const reassignableStatuses = ['assigned', 'in_progress', 'sent_back_by_lead', 'sent_back_by_sm'];
   const reassignable = active.filter(j => reassignableStatuses.includes(j.status));
-  const reassignRows = reassignable.length
-    ? reassignable.map(j => `
-        <tr>
-          <td>${escapeHtml(j.title)}</td>
-          <td>${escapeHtml(j.artistName)}</td>
-          <td>${escapeHtml(j.assignedTo?.name || '—')}</td>
-          <td>${vbvStatusBadge(j.status)}</td>
-          <td>
-            <div class="vbv-assign-row">
-              <input type="date" id="deadline-${j.id}" class="vbv-assign-sel" value="${j.deadline ? j.deadline.split('T')[0] : ''}">
-              <button class="vbv-btn vbv-btn-secondary vbv-btn-sm vbv-save-deadline-btn" data-job-id="${j.id}">Save</button>
-            </div>
-          </td>
-          <td>
-            <div class="vbv-assign-row">
-              <select id="reassign-sel-${j.id}" class="vbv-assign-sel">
-                <option value="">Select editor…</option>
-                ${editorOptions}
-              </select>
-              <button class="vbv-btn vbv-btn-secondary vbv-btn-sm vbv-reassign-btn" data-job-id="${j.id}">Reassign</button>
-              <button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-job-btn" data-job-id="${j.id}" data-job-title="${escapeHtml(j.title)}">Delete</button>
-            </div>
-          </td>
-        </tr>`).join('')
-    : '<tr><td colspan="6"><div class="vbv-empty">No active jobs to reassign.</div></td></tr>';
+  const reassignCards = reassignable.length
+    ? reassignable.map(j => {
+        const actions = `
+          <div class="vbv-assign-row" style="margin-bottom:8px;">
+            <input type="date" id="deadline-${j.id}" class="vbv-assign-sel" value="${j.deadline ? j.deadline.split('T')[0] : ''}">
+            <button class="vbv-btn vbv-btn-secondary vbv-btn-sm vbv-save-deadline-btn" data-job-id="${j.id}">Save Deadline</button>
+          </div>
+          <div class="vbv-assign-row">
+            <select id="reassign-sel-${j.id}" class="vbv-assign-sel">
+              <option value="">Select editor…</option>
+              ${editorOptions}
+            </select>
+            <button class="vbv-btn vbv-btn-secondary vbv-btn-sm vbv-reassign-btn" data-job-id="${j.id}">Reassign</button>
+            <button class="vbv-btn vbv-btn-danger vbv-btn-sm vbv-delete-job-btn" data-job-id="${j.id}" data-job-title="${escapeHtml(j.title)}">Delete</button>
+          </div>`;
+        return vbvJobCardHTML(j, { actions });
+      }).join('')
+    : '<div class="vbv-empty">No active jobs to reassign.</div>';
 
   // ── In SM Review (read-only) ────────────────────────────────────────────
   const smReviewRows = inSmReview.length
@@ -151,12 +144,7 @@ async function vbvRenderLeadEditorDashboard() {
       </div>
       <div id="vbv-reassign-msg"></div>
       <div id="vbv-reassign-list" class="vbv-section-body">
-        <div class="vbv-table-wrap">
-          <table class="vbv-table">
-            <thead><tr><th>Title</th><th>Artist</th><th>Current Editor</th><th>Status</th><th>Deadline</th><th>Reassign</th></tr></thead>
-            <tbody>${reassignRows}</tbody>
-          </table>
-        </div>
+        ${reassignCards}
       </div>
     </div>
 

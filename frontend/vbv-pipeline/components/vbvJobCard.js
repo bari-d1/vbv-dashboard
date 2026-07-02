@@ -36,7 +36,7 @@ function vbvJobCardHTML(job, opts = {}) {
       <div class="vbv-card-header">
         <div>
           <div class="vbv-card-title">${escapeHtml(job.title)}${vbvPipelineTag}</div>
-          <div class="vbv-card-meta">${escapeHtml(job.artistName)} &bull; ${vbvStatusBadge(job.briefType)} &bull; ${vbvStatusBadge(job.status)}</div>
+          <div class="vbv-card-meta">${escapeHtml(job.artistName)} &bull; ${vbvStatusBadge(job.briefType)} &bull; ${vbvStatusBadge(job.status)}${job.assignedTo?.name ? ` &bull; ${escapeHtml(job.assignedTo.name)}` : ''}</div>
         </div>
         <button class="vbv-btn vbv-btn-secondary vbv-btn-sm" onclick="vbvToggleDetails('${detailsId}', this)">Details ▾</button>
       </div>

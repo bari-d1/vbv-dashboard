@@ -79,6 +79,8 @@ async function vbvNavigate(view) {
         html = await vbvRenderMonitor(); break;
       case 'sermon-pipeline':
         html = vbvRenderSermonPipeline(); break;
+      case 'generate-srt':
+        html = vbvRenderGenerateSRT(); break;
       case 'outreach':
         html = await vbvRenderOutreachLeads(); break;
       case 'outreach-lead-detail':
@@ -115,6 +117,7 @@ async function vbvNavigate(view) {
     case 'lead-editor-dashboard': vbvBindLeadEditorDashboard(); break;
     case 'monitor': vbvBindMonitor(); break;
     case 'sermon-pipeline': vbvBindSermonPipeline(); break;
+    case 'generate-srt': vbvBindGenerateSRT(); break;
     case 'outreach': vbvBindOutreachLeads(); break;
     case 'outreach-lead-detail': vbvBindOutreachLeadDetail(); break;
     case 'templates': vbvBindTemplatesList(); break;

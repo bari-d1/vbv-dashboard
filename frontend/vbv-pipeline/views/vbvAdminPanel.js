@@ -34,6 +34,14 @@ async function vbvRenderAdminPanel(view) {
         }
       </td>
       <td>
+        ${u.role === 'editor'
+          ? `<button class="vbv-btn vbv-btn-sm ${u.autoAssignEligible !== false ? 'vbv-btn-success' : 'vbv-btn-secondary'}" onclick="vbvToggleAutoAssign('${u.id}', ${u.autoAssignEligible === false})">
+              ${u.autoAssignEligible !== false ? 'Included' : 'Excluded'}
+            </button>`
+          : '<span style="color:#9ca3af;font-size:0.8rem;">—</span>'
+        }
+      </td>
+      <td>
         <button class="vbv-btn vbv-btn-sm ${u.isActive?'vbv-btn-secondary':'vbv-btn-primary'}" onclick="vbvToggleActive('${u.id}', ${!u.isActive})">${u.isActive?'Deactivate':'Activate'}</button>
         <button class="vbv-btn vbv-btn-sm vbv-btn-danger" onclick="vbvDeleteUser('${u.id}', '${escapeHtml(u.name)}')" style="margin-left:6px;">Delete</button>
       </td>
@@ -73,7 +81,7 @@ async function vbvRenderAdminPanel(view) {
       <div class="vbv-table-wrap">
         <table class="vbv-table">
           <thead><tr>
-            <th>Name</th><th>Email</th><th>Role</th><th>Added</th><th>Password</th><th>Status</th><th>Change Role</th><th>Clipping Tool</th><th>Actions</th>
+            <th>Name</th><th>Email</th><th>Role</th><th>Added</th><th>Password</th><th>Status</th><th>Change Role</th><th>Clipping Tool</th><th>Auto Assign</th><th>Actions</th>
           </tr></thead>
           <tbody id="vbv-users-tbody">${rows}</tbody>
         </table>
@@ -122,6 +130,13 @@ async function vbvToggleActive(id, isActive) {
 async function vbvToggleSermonAccess(id, sermonPipelineAccess) {
   try {
     await vbvApi('PATCH', `/vbv/users/${id}`, { sermonPipelineAccess });
+    vbvNavigate('admin-panel');
+  } catch(e) { alert(e.message); }
+}
+
+async function vbvToggleAutoAssign(id, autoAssignEligible) {
+  try {
+    await vbvApi('PATCH', `/vbv/users/${id}`, { autoAssignEligible });
     vbvNavigate('admin-panel');
   } catch(e) { alert(e.message); }
 }

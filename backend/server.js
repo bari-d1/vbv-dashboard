@@ -18,6 +18,7 @@ const sourceUploadRoutes = require('./routes/sourceUpload');
 const sourceRouterRoutes = require('./routes/sourceRouter');
 const detectRoutes = require('./routes/detect');
 const pipelineRoutes = require('./routes/pipeline');
+const generateSrtRoutes = require('./routes/generateSrt');
 const candidatesRoutes = require('./routes/candidates');
 const briefsRoutes = require('./routes/briefs');
 // Template Management — first deploy must run `node scripts/seedTemplates.js` once to insert
@@ -90,6 +91,21 @@ app.get('/api/pipeline/jobs', pipelineStatusLimiter, (req, res) => {
   res.json({ success: true, jobs: pipelineRoutes.getAllJobs() });
 });
 
+app.get('/api/generate-srt/status/:jobId', pipelineStatusLimiter, (req, res) => {
+  const job = generateSrtRoutes.getJobStatus(req.params.jobId);
+  if (!job) {
+    return res.status(404).json({
+      success: false,
+      error: 'Job not found. The server may have restarted since your job was submitted.',
+    });
+  }
+  res.json({ success: true, ...job });
+});
+
+app.get('/api/generate-srt/jobs', pipelineStatusLimiter, (req, res) => {
+  res.json({ success: true, jobs: generateSrtRoutes.getAllJobs() });
+});
+
 app.use('/api', generalLimiter);
 app.use('/vbv', generalLimiter);
 
@@ -97,6 +113,7 @@ app.use('/api/transcribe', pipelineLimiter);
 app.use('/api/source', pipelineLimiter);
 app.use('/api/detect', pipelineLimiter);
 app.use('/api/pipeline', pipelineLimiter);
+app.use('/api/generate-srt', pipelineLimiter);
 
 // API routes
 app.use('/api/instagram', instagramRoutes);
@@ -113,6 +130,7 @@ app.use('/api/source/upload', sourceUploadRoutes);
 app.use('/api/source/route', sourceRouterRoutes);
 app.use('/api/detect', detectRoutes);
 app.use('/api/pipeline', pipelineRoutes);
+app.use('/api/generate-srt', generateSrtRoutes);
 app.use('/api/candidates', candidatesRoutes);
 app.use('/api/briefs', briefsRoutes);
 app.use('/api/templates', templatesRoutes);

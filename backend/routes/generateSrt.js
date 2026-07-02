@@ -1,0 +1,406 @@
+const express = require('express');
+const { google } = require('googleapis');
+const multer = require('multer');
+const { randomUUID } = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const FormData = require('form-data');
+const axios = require('axios');
+const { getDriveAuthClient } = require('../services/googleDriveAuth');
+
+const router = express.Router();
+
+const AUDIO_DIR = '/tmp/vbv-audio';
+const HETZNER_URL = 'http://5.78.235.93:5000/transcribe';
+const HETZNER_STATUS_URL = 'http://5.78.235.93:5000/status';
+const HETZNER_CANCEL_URL = 'http://5.78.235.93:5000/cancel';
+const ALLOWED_EXTS = ['.mp3', '.mp4', '.wav', '.m4a', '.mov'];
+const RAPIDAPI_HOST = 'youtube-media-downloader.p.rapidapi.com';
+
+const jobs = new Map();
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+// ── SRT generation ──────────────────────────────────────────────────────────
+
+function formatSRTTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.round((seconds % 1) * 1000);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+}
+
+function segmentsToSRT(segments) {
+  return segments
+    .filter(seg => seg.text && seg.text.trim())
+    .map((seg, i) => `${i + 1}\n${formatSRTTime(seg.start)} --> ${formatSRTTime(seg.end)}\n${seg.text.trim()}`)
+    .join('\n\n') + '\n';
+}
+
+// ── YouTube transcript (RapidAPI) ───────────────────────────────────────────
+
+function extractVideoId(url) {
+  for (const re of [
+    /[?&]v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /\/embed\/([a-zA-Z0-9_-]{11})/,
+    /\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ]) {
+    const m = url.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function vttTimeToSeconds(t) {
+  const parts = t.split(':');
+  const secs = parseFloat(parts[parts.length - 1]);
+  const mins = parseInt(parts[parts.length - 2]) || 0;
+  const hrs = parseInt(parts[parts.length - 3]) || 0;
+  return hrs * 3600 + mins * 60 + secs;
+}
+
+function parseVTT(vttText) {
+  const segments = [];
+  const lines = vttText.trim().split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    if (lines[i].includes('-->')) {
+      const parts = lines[i].split('-->');
+      const start = vttTimeToSeconds(parts[0].trim());
+      const end = vttTimeToSeconds(parts[1].trim());
+      i++;
+      const textLines = [];
+      while (i < lines.length && lines[i].trim() !== '' && !lines[i].match(/^\d+$/) && !lines[i].includes('-->')) {
+        textLines.push(lines[i].trim());
+        i++;
+      }
+      const text = textLines.join(' ').replace(/^>>\s*/g, '').trim();
+      if (text) segments.push({ start, end, text });
+    } else {
+      i++;
+    }
+  }
+  return segments;
+}
+
+async function getYouTubeTranscript(url) {
+  const videoId = extractVideoId(url);
+  if (!videoId) throw new Error('Could not extract video ID from URL');
+
+  const apiKey = process.env.RAPIDAPI_KEY;
+  if (!apiKey) throw new Error('RAPIDAPI_KEY environment variable is not set');
+
+  let detailsRes;
+  try {
+    detailsRes = await axios.get(`https://${RAPIDAPI_HOST}/v2/video/details?videoId=${videoId}`, {
+      headers: { 'x-rapidapi-host': RAPIDAPI_HOST, 'x-rapidapi-key': apiKey },
+      timeout: 15000,
+    });
+  } catch (err) {
+    const status = err.response?.status;
+    if (status === 403) throw new Error('Transcript service: access denied — check RAPIDAPI_KEY and subscription');
+    if (status === 429) throw new Error('Transcript service: rate limit reached — try again shortly');
+    if (err.code === 'ECONNABORTED' || status === 504 || status === 502) throw new Error('Transcript service is temporarily unavailable — try again in a few minutes');
+    throw new Error(`Transcript service error: ${err.message}`);
+  }
+
+  const subtitleItems = detailsRes.data?.subtitles?.items;
+  if (!subtitleItems || subtitleItems.length === 0) return null;
+
+  const track = subtitleItems.find(s => s.code === 'en') || subtitleItems[0];
+
+  let subtitleRes;
+  try {
+    subtitleRes = await axios.get(`https://${RAPIDAPI_HOST}/v2/video/subtitles`, {
+      params: { subtitleUrl: track.url },
+      headers: { 'x-rapidapi-host': RAPIDAPI_HOST, 'x-rapidapi-key': apiKey },
+      timeout: 15000,
+    });
+  } catch (err) {
+    const status = err.response?.status;
+    if (err.code === 'ECONNABORTED' || status === 504 || status === 502) throw new Error('Transcript service is temporarily unavailable — try again in a few minutes');
+    throw new Error(`Transcript fetch error: ${err.message}`);
+  }
+
+  return parseVTT(subtitleRes.data);
+}
+
+// ── Drive ingestion ─────────────────────────────────────────────────────────
+
+function extractDriveFileId(driveUrl) {
+  for (const re of [/\/file\/d\/([a-zA-Z0-9_-]+)/, /[?&]id=([a-zA-Z0-9_-]+)/, /\/open\?id=([a-zA-Z0-9_-]+)/]) {
+    const m = driveUrl.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+async function ingestDrive(driveUrl) {
+  const fileId = extractDriveFileId(driveUrl);
+  if (!fileId) throw new Error('Could not extract file ID from Drive URL');
+  ensureDir(AUDIO_DIR);
+  const auth = getDriveAuthClient();
+  const drive = google.drive({ version: 'v3', auth });
+  const meta = await drive.files.get({ fileId, fields: 'name' });
+  const ext = path.extname(meta.data.name || '') || '.mp4';
+  const outputPath = path.join(AUDIO_DIR, `drive-${randomUUID()}${ext}`);
+  const response = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
+  const dest = fs.createWriteStream(outputPath);
+  await new Promise((resolve, reject) => {
+    response.data.pipe(dest);
+    response.data.on('error', reject);
+    dest.on('finish', resolve);
+    dest.on('error', reject);
+  });
+  return outputPath;
+}
+
+// ── Transcription (Hetzner) ─────────────────────────────────────────────────
+
+async function pollForResult(hetznerJobId, onProgress, localJobId) {
+  const apiKey = process.env.VBV_API_KEY;
+  while (true) {
+    if (localJobId && jobs.get(localJobId)?.status === 'cancelled') return null;
+
+    let statusData;
+    try {
+      const res = await axios.get(`${HETZNER_STATUS_URL}/${hetznerJobId}`, {
+        headers: { 'X-API-Key': apiKey },
+      });
+      statusData = res.data;
+    } catch (err) {
+      throw new Error(`Status check failed: ${err.response?.data?.error || err.message}`);
+    }
+
+    if (statusData.status === 'complete') {
+      if (!statusData.success) throw new Error(statusData.error || 'Transcription failed');
+      return statusData.segments;
+    }
+    if (statusData.status === 'failed') throw new Error(statusData.error || 'Transcription failed');
+    if (onProgress && statusData.stage) onProgress({ stage: statusData.stage, percent: statusData.percent });
+
+    await new Promise(resolve => setTimeout(resolve, 10000));
+  }
+}
+
+async function transcribeAudio(audioPath, onProgress, localJobId) {
+  if (!process.env.VBV_API_KEY) throw new Error('VBV_API_KEY environment variable is not set');
+  const form = new FormData();
+  form.append('audio', fs.createReadStream(audioPath), path.basename(audioPath));
+
+  let submitData;
+  try {
+    const response = await axios.post(HETZNER_URL, form, {
+      headers: { ...form.getHeaders(), 'X-API-Key': process.env.VBV_API_KEY },
+    });
+    submitData = response.data;
+  } catch (err) {
+    throw new Error(`Transcription server error: ${err.response?.data?.error || err.message}`);
+  }
+
+  if (!submitData.success || !submitData.jobId) throw new Error(submitData.error || 'Failed to queue transcription job');
+
+  if (localJobId) {
+    const existing = jobs.get(localJobId);
+    if (existing) jobs.set(localJobId, { ...existing, hetznerJobId: submitData.jobId });
+  }
+
+  return pollForResult(submitData.jobId, onProgress, localJobId);
+}
+
+async function transcribeYouTube(url, onProgress, localJobId) {
+  if (!process.env.VBV_API_KEY) throw new Error('VBV_API_KEY environment variable is not set');
+  const form = new FormData();
+  form.append('youtube_url', url);
+
+  let submitData;
+  try {
+    const response = await axios.post(HETZNER_URL, form, {
+      headers: { ...form.getHeaders(), 'X-API-Key': process.env.VBV_API_KEY },
+    });
+    submitData = response.data;
+  } catch (err) {
+    throw new Error(`Transcription server error: ${err.response?.data?.error || err.message}`);
+  }
+
+  if (!submitData.success || !submitData.jobId) throw new Error(submitData.error || 'Failed to queue transcription job');
+
+  if (localJobId) {
+    const existing = jobs.get(localJobId);
+    if (existing) jobs.set(localJobId, { ...existing, hetznerJobId: submitData.jobId });
+  }
+
+  return pollForResult(submitData.jobId, onProgress, localJobId);
+}
+
+// ── Background SRT runner ───────────────────────────────────────────────────
+
+async function runSrtBackground(jobId, opts) {
+  const { sourceType, url, driveUrl, audioPath: uploadedPath, videoTitle } = opts;
+
+  const setStage = (stage, percent = null) => {
+    jobs.set(jobId, { ...jobs.get(jobId), status: 'processing', stage, percent });
+  };
+
+  let segments;
+
+  if (sourceType === 'youtube_transcript') {
+    setStage('fetching_transcript', 0);
+    try {
+      segments = await getYouTubeTranscript(url);
+    } catch (err) {
+      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: err.message });
+      return;
+    }
+    if (!segments || segments.length === 0) {
+      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: 'No captions available for this video. Try uploading the audio file instead.' });
+      return;
+    }
+  } else if (sourceType === 'youtube') {
+    setStage('downloading', 0);
+    try {
+      segments = await transcribeYouTube(url, ({ stage, percent }) => setStage(stage, percent), jobId);
+    } catch (err) {
+      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: err.message });
+      return;
+    }
+    if (segments === null) return;
+  } else {
+    let audioPath = uploadedPath;
+    if (sourceType === 'drive') {
+      setStage('downloading', 0);
+      try {
+        audioPath = await ingestDrive(driveUrl);
+      } catch (err) {
+        jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Ingestion failed: ${err.message}` });
+        return;
+      }
+    }
+    setStage('transcribing', 0);
+    try {
+      segments = await transcribeAudio(audioPath, ({ stage, percent }) => setStage(stage, percent), jobId);
+    } catch (err) {
+      fs.unlink(audioPath, () => {});
+      jobs.set(jobId, { ...jobs.get(jobId), status: 'failed', error: `Transcription failed: ${err.message}` });
+      return;
+    }
+    fs.unlink(audioPath, () => {});
+    if (segments === null) return;
+  }
+
+  if (jobs.get(jobId)?.status === 'cancelled') return;
+
+  const srtContent = segmentsToSRT(segments);
+  const filename = videoTitle ? `${videoTitle.replace(/[^a-z0-9 _-]/gi, '_')}.srt` : `subtitles-${jobId}.srt`;
+
+  jobs.set(jobId, { ...jobs.get(jobId), status: 'complete', srtContent, filename });
+}
+
+// ── Multer ──────────────────────────────────────────────────────────────────
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => { ensureDir(AUDIO_DIR); cb(null, AUDIO_DIR); },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `srt-upload-${randomUUID()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    ALLOWED_EXTS.includes(ext)
+      ? cb(null, true)
+      : cb(new Error(`Unsupported file type: ${ext}. Allowed: ${ALLOWED_EXTS.join(', ')}`));
+  },
+});
+
+// ── Route: submit ───────────────────────────────────────────────────────────
+
+router.post('/', upload.single('audioFile'), (req, res) => {
+  const { sourceType, url, driveUrl, videoTitle } = req.body;
+
+  if (!sourceType) {
+    return res.status(400).json({ success: false, error: 'sourceType is required' });
+  }
+
+  let uploadedPath = null;
+
+  if (sourceType === 'youtube' || sourceType === 'youtube_transcript') {
+    if (!url) return res.status(400).json({ success: false, error: 'url is required for YouTube source' });
+  } else if (sourceType === 'drive') {
+    if (!driveUrl) return res.status(400).json({ success: false, error: 'driveUrl is required for Drive source' });
+  } else if (sourceType === 'upload') {
+    if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded. Field name must be "audioFile".' });
+    uploadedPath = req.file.path;
+  } else {
+    return res.status(400).json({ success: false, error: `Unknown sourceType: ${sourceType}` });
+  }
+
+  const jobId = randomUUID();
+  jobs.set(jobId, {
+    jobId,
+    status: 'pending',
+    error: null,
+    srtContent: null,
+    filename: null,
+    videoTitle: videoTitle || '',
+    sourceType,
+    createdAt: new Date().toISOString(),
+  });
+
+  runSrtBackground(jobId, { sourceType, url, driveUrl, audioPath: uploadedPath, videoTitle: videoTitle || '' })
+    .catch(err => {
+      const existing = jobs.get(jobId);
+      if (existing && existing.status !== 'complete' && existing.status !== 'failed') {
+        jobs.set(jobId, { ...existing, status: 'failed', error: err.message });
+      }
+    });
+
+  res.status(202).json({ success: true, jobId, status: 'pending' });
+});
+
+// ── Route: cancel ───────────────────────────────────────────────────────────
+
+router.delete('/:jobId', async (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+  if (job.status === 'complete' || job.status === 'failed') {
+    return res.status(400).json({ success: false, error: `Job already ${job.status}` });
+  }
+
+  jobs.set(req.params.jobId, { ...job, status: 'cancelled' });
+
+  if (job.hetznerJobId) {
+    axios.post(`${HETZNER_CANCEL_URL}/${job.hetznerJobId}`, {}, {
+      headers: { 'X-API-Key': process.env.VBV_API_KEY },
+      timeout: 5000,
+    }).catch(() => {});
+  }
+
+  res.json({ success: true });
+});
+
+// ── Route: download ─────────────────────────────────────────────────────────
+
+router.get('/download/:jobId', (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
+  if (job.status !== 'complete' || !job.srtContent) {
+    return res.status(400).json({ success: false, error: 'SRT not ready' });
+  }
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+  res.send(job.srtContent);
+});
+
+module.exports = router;
+module.exports.getJobStatus = (jobId) => jobs.get(jobId) || null;
+module.exports.getAllJobs   = () => Array.from(jobs.values())
+  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
