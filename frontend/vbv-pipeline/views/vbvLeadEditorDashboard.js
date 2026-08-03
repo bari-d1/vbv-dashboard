@@ -97,20 +97,52 @@ async function vbvRenderLeadEditorDashboard() {
         </tr>`).join('')
     : '<tr><td colspan="5"><div class="vbv-empty">Nothing with Social Media right now.</div></td></tr>';
 
-  // ── Completed (read-only) ──────────────────────────────────────────────
-  const completedRows = completed.length
-    ? completed.map(j => {
+  // ── Completed (read-only, grouped by month) ────────────────────────────
+  let completedHTML = '';
+  if (!completed.length) {
+    completedHTML = '<div class="vbv-empty">No completed jobs yet.</div>';
+  } else {
+    // Group by the month the job was SM-approved (fall back to createdAt)
+    const groups = {};
+    completed.forEach(j => {
+      const sub = j.submissions?.[0];
+      const dateStr = sub?.smReviewedAt || j.createdAt;
+      const d = new Date(dateStr);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      if (!groups[key]) groups[key] = { label, jobs: [] };
+      groups[key].jobs.push(j);
+    });
+
+    Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach(key => {
+      const { label, jobs: groupJobs } = groups[key];
+      const rows = groupJobs.map(j => {
         const sub = j.submissions?.[0];
+        const completedDate = sub?.smReviewedAt
+          ? new Date(sub.smReviewedAt).toLocaleDateString('en-GB')
+          : '—';
+        const approvedBy = sub?.smReviewedBy?.name || '—';
         return `
-        <tr>
-          <td>${escapeHtml(j.title)}</td>
-          <td>${escapeHtml(j.artistName)}</td>
-          <td>${escapeHtml(j.assignedTo?.name || '—')}</td>
-          <td>${vbvStatusBadge('sm_approved')}</td>
-          <td>${sub ? `<a href="${escapeHtml(sub.driveLink)}" target="_blank" rel="noopener">Open Video</a>` : '—'}</td>
-        </tr>`;
-      }).join('')
-    : '<tr><td colspan="5"><div class="vbv-empty">No completed jobs yet.</div></td></tr>';
+          <tr>
+            <td>${escapeHtml(j.title)}</td>
+            <td>${escapeHtml(j.artistName)}</td>
+            <td>${escapeHtml(j.assignedTo?.name || '—')}</td>
+            <td>${escapeHtml(completedDate)}</td>
+            <td>${escapeHtml(approvedBy)}</td>
+            <td>${sub ? `<a href="${escapeHtml(sub.driveLink)}" target="_blank" rel="noopener">Open Video</a>` : '—'}</td>
+          </tr>`;
+      }).join('');
+
+      completedHTML += `
+        <p style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin:20px 0 8px;">${escapeHtml(label)} <span style="font-weight:400;">(${groupJobs.length})</span></p>
+        <div class="vbv-table-wrap">
+          <table class="vbv-table">
+            <thead><tr><th>Title</th><th>Artist</th><th>Editor</th><th>Completed</th><th>Approved By</th><th>Video</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    });
+  }
 
   return `
     <h1>Lead Editor</h1>
@@ -169,12 +201,7 @@ async function vbvRenderLeadEditorDashboard() {
         <button class="vbv-btn vbv-btn-secondary vbv-btn-sm" onclick="vbvToggleSection('vbv-completed-list', this)">Show ▾</button>
       </div>
       <div id="vbv-completed-list" class="vbv-section-body">
-        <div class="vbv-table-wrap">
-          <table class="vbv-table">
-            <thead><tr><th>Title</th><th>Artist</th><th>Editor</th><th>Status</th><th>Video</th></tr></thead>
-            <tbody>${completedRows}</tbody>
-          </table>
-        </div>
+        ${completedHTML}
       </div>
     </div>`;
 }

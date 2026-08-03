@@ -11,6 +11,7 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'monitor', label: 'Monitor' },
       { view: 'sermon-pipeline', label: 'Clipping Tool' },
       { view: 'generate-srt', label: 'Generate SRT' },
+      { view: 'remuneration', label: 'Remuneration' },
       { view: 'outreach', label: 'Outreach' },
       { view: 'templates', label: 'Templates' },
       { view: 'clients', label: 'Clients' },

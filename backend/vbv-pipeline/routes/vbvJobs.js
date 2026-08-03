@@ -152,7 +152,11 @@ router.get('/completed', auth, role('lead_editor', 'admin'), async (req, res) =>
     include: {
       assignedTo: { select: { name: true } },
       createdBy: { select: { name: true } },
-      submissions: { orderBy: { submittedAt: 'desc' }, take: 1 },
+      submissions: {
+        orderBy: { submittedAt: 'desc' },
+        take: 1,
+        include: { smReviewedBy: { select: { name: true } } },
+      },
     },
     orderBy: { createdAt: 'desc' },
   });
