@@ -25,6 +25,7 @@ const briefsRoutes = require('./routes/briefs');
 // the default 'VBV Edits Outreach' template (it's a no-op if any templates already exist).
 const templatesRoutes = require('./routes/templates');
 const clientsRoutes = require('./routes/clients');
+const landingLeadRoutes = require('./routes/landingLead');
 
 // VBV Pipeline routes
 const vbvAuthRoutes = require('./vbv-pipeline/routes/vbvAuth');
@@ -135,6 +136,7 @@ app.use('/api/candidates', candidatesRoutes);
 app.use('/api/briefs', briefsRoutes);
 app.use('/api/templates', templatesRoutes);
 app.use('/api/clients', clientsRoutes);
+app.use('/api/landing-lead', landingLeadRoutes);
 
 // VBV Pipeline
 app.use('/vbv/auth', vbvAuthRoutes);

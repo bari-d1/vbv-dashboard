@@ -125,4 +125,27 @@ async function sendClientEmail(to, subject, bodyText) {
   return response;
 }
 
-module.exports = { sendOutreachEmail, sendClientEmail };
+// Notifies the VBV Edits team of a new landing page submission (QR flyer form).
+async function sendLandingLeadNotification({ name, church, youtube, attendance }) {
+  const to = 'versebyversestudio@gmail.com';
+  const subject = `New sample clip request: ${church}`;
+
+  const html = `
+    <div style="font-family: 'Space Mono', 'Courier New', monospace; font-size: 15px; color: #0a0a0a;">
+      <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+      <p><strong>Church:</strong> ${escapeHtml(church)}</p>
+      <p><strong>YouTube:</strong> <a href="${escapeHtml(youtube)}">${escapeHtml(youtube)}</a></p>
+      <p><strong>Weekly attendance:</strong> ${escapeHtml(attendance)}</p>
+    </div>
+  `;
+
+  return getClient().emails.send({
+    from: FROM,
+    to,
+    replyTo: REPLY_TO,
+    subject,
+    html,
+  });
+}
+
+module.exports = { sendOutreachEmail, sendClientEmail, sendLandingLeadNotification };
