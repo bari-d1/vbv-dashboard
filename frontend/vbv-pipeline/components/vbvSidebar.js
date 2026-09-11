@@ -15,6 +15,7 @@ function vbvRenderSidebar(user, activeView) {
       { view: 'outreach', label: 'Outreach' },
       { view: 'templates', label: 'Templates' },
       { view: 'clients', label: 'Clients' },
+      { view: 'brand-offers', label: 'Brand Offers' },
     ],
     social_media: [
       { view: 'social-dashboard', label: 'Create Brief' },

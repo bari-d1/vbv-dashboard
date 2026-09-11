@@ -248,6 +248,37 @@ model VbvTemplate {
   updatedAt DateTime @updatedAt
 }
 
+// ── VBV Brand Offer Pages ───────────────────────────────────────────────────
+
+model VbvOffer {
+  id           String              @id @default(cuid())
+  slug         String              @unique
+  churchName   String
+  passwordHash String
+  offerHtml    String
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  accessLogs   VbvOfferAccessLog[]
+}
+
+model VbvOfferAccessLog {
+  id        String             @id @default(cuid())
+  offerId   String?
+  slug      String
+  type      VbvOfferAccessType
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime           @default(now())
+  offer     VbvOffer?          @relation(fields: [offerId], references: [id])
+}
+
+enum VbvOfferAccessType {
+  VIEW
+  UNLOCK_SUCCESS
+  UNLOCK_FAIL
+}
+
 model VbvClient {
   id         String          @id @default(cuid())
   churchName String

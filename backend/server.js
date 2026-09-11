@@ -26,6 +26,7 @@ const briefsRoutes = require('./routes/briefs');
 const templatesRoutes = require('./routes/templates');
 const clientsRoutes = require('./routes/clients');
 const landingLeadRoutes = require('./routes/landingLead');
+const offerRoutes = require('./routes/offers');
 
 // VBV Pipeline routes
 const vbvAuthRoutes = require('./vbv-pipeline/routes/vbvAuth');
@@ -35,6 +36,7 @@ const vbvSubmissionsRoutes = require('./vbv-pipeline/routes/vbvSubmissions');
 const vbvLogsRoutes = require('./vbv-pipeline/routes/vbvLogs');
 const vbvLeadsRoutes = require('./vbv-pipeline/routes/vbvLeads');
 const vbvMonitorRoutes = require('./vbv-pipeline/routes/vbvMonitor');
+const vbvOffersRoutes = require('./vbv-pipeline/routes/vbvOffers');
 
 const { startGmailPoller } = require('./services/gmailPoller');
 const { runAutoAssignment } = require('./vbv-pipeline/services/vbvJobAssignment');
@@ -137,6 +139,7 @@ app.use('/api/briefs', briefsRoutes);
 app.use('/api/templates', templatesRoutes);
 app.use('/api/clients', clientsRoutes);
 app.use('/api/landing-lead', landingLeadRoutes);
+app.use('/offer', offerRoutes);
 
 // VBV Pipeline
 app.use('/vbv/auth', vbvAuthRoutes);
@@ -146,6 +149,7 @@ app.use('/vbv/submissions', vbvSubmissionsRoutes);
 app.use('/vbv/logs', vbvLogsRoutes);
 app.use('/vbv/leads', vbvLeadsRoutes);
 app.use('/vbv/monitor', vbvMonitorRoutes);
+app.use('/vbv/offers', vbvOffersRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

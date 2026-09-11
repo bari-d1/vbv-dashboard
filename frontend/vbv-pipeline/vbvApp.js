@@ -95,6 +95,8 @@ async function vbvNavigate(view) {
         html = await vbvRenderClientsList(); break;
       case 'client-detail':
         html = await vbvRenderClientDetail(); break;
+      case 'brand-offers':
+        html = await vbvRenderOffers(); break;
       default:
         html = '<div class="vbv-empty">View not found.</div>';
     }
@@ -127,6 +129,7 @@ async function vbvNavigate(view) {
     case 'template-edit': vbvBindTemplateEdit(); break;
     case 'clients': vbvBindClientsList(); break;
     case 'client-detail': vbvBindClientDetail(); break;
+    case 'brand-offers': vbvBindOffers(); break;
   }
 }
 
