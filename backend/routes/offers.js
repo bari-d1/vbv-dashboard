@@ -71,7 +71,7 @@ function gateShell({ churchName, slug }) {
       e.preventDefault();
       err.style.display = 'none';
       btn.disabled = true;
-      fetch(${JSON.stringify(`/offer/${slug}/unlock`)}, {
+      fetch(${JSON.stringify(`https://vbv-dashboard.dayoadebari.com/offer/${slug}/unlock`)}, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: document.getElementById('password').value }),
